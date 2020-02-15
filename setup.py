@@ -8,7 +8,7 @@ setup(
         version="0.1",
         author='Olivier Vincent',
         author_email='olivier.vincent@univ-lyon1.fr',
-        url='https://cameleon.univ-lyon1.fr/ovincent/plov',
+        url='https://cameleon.univ-lyon1.fr/ovincent/plot-ov',
         description='Additional interactive features for matplotlib',
         long_description=long_description,
         long_description_content_type="text/markdown",

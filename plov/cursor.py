@@ -1,8 +1,8 @@
 """ Moving cursor that follows the mouse on a matplotlib figure. Useful to
 enhance things like ginput
  """
- 
-# TO DO -- add function that returns click position 
+
+# TO DO -- add function that returns click position
 # TO DO -- add color and style options
 # TO DO -- add str and repr
 
@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ================================= example ==================================
+
 
 def main():
 
@@ -28,44 +29,42 @@ def main():
 
 # =============================== cursor class ===============================
 
+
 class Cursor:
 
-    
     def __init__(self, figure=None):
-        self.ffg = plt.gcf() if figure==None else figure
+        self.ffg = plt.gcf() if figure is None else figure
         self.cursor = None
         self.connect()
 
-
     def create_cursor(self, position):
-        """ creates a cursor in the form of a vertical and horizontal line, 
+        """ creates a cursor in the form of a vertical and horizontal line,
         which stop at the edge of the axes"""
         ax = self.aax
         (x, y) = position
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-        
-        hline, = ax.plot([xmin, xmax], [y, y], ':r') # horizontal cursor line
-        vline, = ax.plot([x, x], [ymin, ymax], ':r') # vertical cursor line
-        
-        ax.set_xlim(xmin, xmax) # because plotting the lines changes the initial xlim, ylim 
+
+        hline, = ax.plot([xmin, xmax], [y, y], ':r')  # horizontal cursor line
+        vline, = ax.plot([x, x], [ymin, ymax], ':r')  # vertical cursor line
+
+        # because plotting the lines changes the initial xlim, ylim
+        ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
-        
+
         cursor = (hline, vline)
         self.cursor = cursor
         return cursor
-
 
     def delete_cursor(self, event):
         """ deletes cursor, this is called when the mouse exit the axes
         """
         (hline, vline) = self.cursor
         hline.remove()
-        vline.remove()        
+        vline.remove()
         self.ffg.canvas.draw()
-        self.cursor=None
-        return 
-
+        self.cursor = None
+        return
 
     def connect(self):
         """ connects figure events to callback functions
@@ -76,55 +75,51 @@ class Cursor:
         self.pressb = self.ffg.canvas.mpl_connect('button_press_event', self.on_press)
         self.closefig = self.ffg.canvas.mpl_connect('close_event', self.on_close)
 
-      
     def enter_axes(self, event):
-        """ when mouse enters axes, create a cursor 
+        """ when mouse enters axes, create a cursor
         """
         ax = event.inaxes
         self.aax = ax
-                
+
         pos = (event.xdata, event.ydata)
         hline, vline = self.create_cursor(pos)
-        
+
         self.ffg.canvas.draw()
-        
-    
+
     def on_motion(self, event):
         """ when mouse is in motion, update the position of the cursor
         """
-        if self.cursor==None: return # no active cursor --> do nothing
-        
+        if self.cursor is None: return  # no active cursor --> do nothing
+
         hline, vline = self.cursor
         ax = self.aax
-        
-        xmin, xmax = ax.get_xlim() # this is to be able to accommodate changes in axes limits while cursor is on
+
+        # accommodates changes in axes limits while cursor is on
+        xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-        
+
         x = event.xdata
         y = event.ydata
-        
+
         hline.set_xdata([xmin, xmax])
         hline.set_ydata([y, y])
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
-        
+
         self.ffg.canvas.draw()
 
-    
-    def on_press(self, event):       
-            print(event)
-
+    def on_press(self, event):
+        print(event)
 
     def on_close(self, event):
-            self.ffg.canvas.mpl_disconnect(self.enterax)
-            self.ffg.canvas.mpl_disconnect(self.leaveax)
-            self.ffg.canvas.mpl_disconnect(self.motion)
-            self.ffg.canvas.mpl_disconnect(self.pressb)
-            self.ffg.canvas.mpl_disconnect(self.closefig)
+        self.ffg.canvas.mpl_disconnect(self.enterax)
+        self.ffg.canvas.mpl_disconnect(self.leaveax)
+        self.ffg.canvas.mpl_disconnect(self.motion)
+        self.ffg.canvas.mpl_disconnect(self.pressb)
+        self.ffg.canvas.mpl_disconnect(self.closefig)
 
 # ================================ direct run ================================
 
+
 if __name__ == '__main__':
     main()
-
-
