@@ -24,8 +24,10 @@ def main():
     ax1.plot(x, y, '-ok')
     ax2.plot(z, '-ob')
 
-    curs = Cursor()
     plt.show()
+    
+    a = ginput(3, show_clicks=True)
+    print(a)
 
 # =============================== cursor class ===============================
 
@@ -56,7 +58,10 @@ class Cursor:
         self.cursor = cursor
         return cursor
 
-    def delete_cursor(self, event):
+    def leave_axes(self, event):
+        self.delete_cursor()
+
+    def delete_cursor(self):
         """ deletes cursor, this is called when the mouse exit the axes
         """
         (hline, vline) = self.cursor
@@ -70,7 +75,7 @@ class Cursor:
         """ connects figure events to callback functions
         """
         self.enterax = self.ffg.canvas.mpl_connect('axes_enter_event', self.enter_axes)
-        self.leaveax = self.ffg.canvas.mpl_connect('axes_leave_event', self.delete_cursor)
+        self.leaveax = self.ffg.canvas.mpl_connect('axes_leave_event', self.leave_axes)
         self.motion = self.ffg.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.pressb = self.ffg.canvas.mpl_connect('button_press_event', self.on_press)
         self.closefig = self.ffg.canvas.mpl_connect('close_event', self.on_close)
@@ -109,14 +114,30 @@ class Cursor:
         self.ffg.canvas.draw()
 
     def on_press(self, event):
-        print(event)
+        pass
+        #print(event)
 
     def on_close(self, event):
+        self.disconnect_cursor()
+        
+    def disconnect_cursor(self):
         self.ffg.canvas.mpl_disconnect(self.enterax)
         self.ffg.canvas.mpl_disconnect(self.leaveax)
         self.ffg.canvas.mpl_disconnect(self.motion)
         self.ffg.canvas.mpl_disconnect(self.pressb)
         self.ffg.canvas.mpl_disconnect(self.closefig)
+
+
+def ginput(*args, **kwargs):
+    """Extension of matplotlib's ginput to include a cursor"""
+    C = Cursor()            # create cursor
+    result = plt.ginput(*args, **kwargs)
+    C.delete_cursor()
+    C.disconnect_cursor()
+    del C
+    
+    return result
+
 
 # ================================ direct run ================================
 
