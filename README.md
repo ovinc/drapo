@@ -37,9 +37,9 @@ By default, color is red, style is dotted (:), size is 1.
 (this one will be slow because of the blit=False option)
     
 #### Interactive Key shortcuts
-    - Space bar: toggle cursor visitbility (on/off).
-    - Up/down arrows: increase or decrease size (linewidth).
-    - Left/right arrows: cycle through different cursor colors.
+- Space bar: toggle cursor visitbility (on/off).
+- Up/down arrows: increase or decrease size (linewidth).
+- Left/right arrows: cycle through different cursor colors.
 
 #### Notes
 - Using panning and zooming works with the cursor on; to enable this, 
