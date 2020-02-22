@@ -10,6 +10,7 @@ a ginput function identical to the matplotlib ginput, but with a cursor.
 
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 
 # ================================= example ==================================
@@ -23,15 +24,15 @@ def main():
     z = np.random.randn(1000)
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.plot(x, y, '-ok')
-    ax2.plot(z, '-ob')
+    ax1.plot(x, y, '-ob')
+    ax2.plot(z, '-ok')
     
     plt.show()
 
     a = ginput(3, show_clicks=True)
     print(a)
 
-    Cursor() # this does not seem to work while in main(), but works from console
+    # Cursor() # this does not seem to work while in main(), but works from console
 
 
 # =============================== Cursor class ===============================
@@ -51,7 +52,7 @@ class Cursor:
 
     Cursor style can be modified with the options color, style and size, which
     correspond to matplotlib's color, linestyle and linewidth respectively.
-    By default, color is red, style is dotted (:), size is 0.5.
+    By default, color is red, style is dotted (:), size is 1.
 
     Using panning and zooming works with the cursor on; to enable this,
     blitting is temporarily suspended during a click+drag event.
@@ -64,7 +65,7 @@ class Cursor:
     they do not show up. Typing Cursor() in the console works, though.
     """
 
-    def __init__(self, figure=None, color='r', style=':', blit=True, size=0.5):
+    def __init__(self, figure=None, color='r', style=':', blit=True, size=1):
         """Note: cursor drawn only when the mouse enters some axes."""
         self.ffg = plt.gcf() if figure is None else figure
         self.cursor = None
@@ -171,7 +172,6 @@ class Cursor:
         # work well, because it seems to get the backgorund data before the
         # plot has been updated
         if self.just_released is True:
-            canvas.draw()
             if self.blit is True:
                 self.background = canvas.copy_from_bbox(self.aax.bbox)
                 self.just_released = False
@@ -199,7 +199,7 @@ class Cursor:
         """
         self.press = False
         self.just_released = True
-
+        self.ffg.canvas.draw()
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""
@@ -219,10 +219,9 @@ class Cursor:
         self.enterax_id = self.ffg.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
         self.leaveax_id = self.ffg.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
         self.motion_id = self.ffg.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        self.pressb_id = self.ffg.canvas.mpl_connect('button_mouse_press_event', self.on_mouse_press)
-        self.releaseb_id = self.ffg.canvas.mpl_connect('button_mouse_release_event', self.on_mouse_release)
+        self.pressb_id = self.ffg.canvas.mpl_connect('button_press_event', self.on_mouse_press)
+        self.releaseb_id = self.ffg.canvas.mpl_connect('button_release_event', self.on_mouse_release)
         self.closefig_id = self.ffg.canvas.mpl_connect('close_event', self.on_close)
-
 
     def disconnect(self):
         """Disconnect figure events from callback functions."""
