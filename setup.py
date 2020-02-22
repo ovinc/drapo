@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setup(
         name='plov',
-        version="0.2",
+        version="0.3",
         author='Olivier Vincent',
         author_email='olivier.vincent@univ-lyon1.fr',
         url='https://cameleon.univ-lyon1.fr/ovincent/plot-ov',
