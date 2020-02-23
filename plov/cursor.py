@@ -4,7 +4,7 @@ This module contains a Cursor class (cursor that moves with the mouse) and
 a ginput function identical to the matplotlib ginput, but with a cursor.
 """
 
-# TODO - To allow cursor to appear on multiple figures, it is necessary to 
+# TODO - To allow cursor to appear on multiple figures, it is necessary to
 # connect figure events to callbacks for every existing figure --> do a figure list
 # and connect one by one.
 
@@ -26,28 +26,35 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.plot(x, y, '-ob')
     ax2.plot(z, '-ok')
-    
+
     c1 = Cursor()
-    
+
     fig2, ax3 = plt.subplots()
     ax3.plot(y, x, '-ok')
-    
-    c2 = Cursor() # this does not seem to work while in main(), but works from console
+
+    c2 = Cursor() 
     
     plt.show()
-    #plt.ginput(2)
+    
+    fig3, ax4 = plt.subplots()
+    ax4.plot(1, 1, 'ok')
+    data = ginput(3)
+    plt.close(fig3)
 
 # =============================== Cursor class ===============================
 
 
 class Cursor:
     """ Cursor following the mouse on any axes of a single figure.
-    
+
     This class creates a cursor that moves along with the mouse. It is drawn
     only within existing axes, but contrary to the matplotlib widget Cursor,
     is not bound to specific axes: moving the mouse over different axes will
     plot the cursor in these other axes. Right now, the cursor is bound to a
     certain figure, however this could be changed easily.
+
+    It is not allowed to have more than 1 cursor per figure, to avoid conflics
+    between cursors in blitting mode.
 
     Blitting enables smooth motion of the cursor (high fps), but can be
     deactivated with the option blit=False (by default, blit=True).
@@ -55,8 +62,8 @@ class Cursor:
     Cursor style can be modified with the options color, style and size, which
     correspond to matplotlib's color, linestyle and linewidth respectively.
     By default, color is red, style is dotted (:), size is 1.
-    
-    The cursor can leave marks and/or record click positions if there is a 
+
+    The cursor can leave marks and/or record click positions if there is a
     click with a specific button (by default, left mouse button). Clicks can
     be cancelled with the remove button (by default, right mouse button).
     Options:
@@ -67,14 +74,14 @@ class Cursor:
         - nclicks : cursor is deactivated after nclicks clicks (useful for ginput)
         - mark_symbol (usual matplolib's symbols, default is '+')
         - mark_size (matplotlib's markersize)
-        
+
     Note: currently, the mark color is always the same as the cursor.
-    
-    The marked clicks associated with a cursor can be removed with 
+
+    The marked clicks associated with a cursor can be removed with
     `Cursor.erase_marks()`
     and the stored click data can be reset using
     `Cursor.erase_data()`.
-    
+
     Interactive Key shortcuts:
         - space bar: toggle cursor visitbility (on/off)
         - up/down arrows: increase or decrease size (linewidth)
@@ -85,31 +92,32 @@ class Cursor:
 
     A small bug is that if I create one or several cursors within main()
     they do not show up. Typing Cursor() in the console works, though.
-    
+
     Another "bug" is that the cursor does not reappear immediately after
     panning/zooming if blitting is activated, but needs the mouse to move.
     """
-    
+
     # Define colors the arrows will cycle through
     # (in addition to the one specified by the user)
     colors = ['r', 'b', 'k', 'w']
-    
-    cursors = []  # list of Cursor instances
 
-    def __init__(self, fig=None, color='r', style=':', blit=True, size=1, 
+    # list of Cursor instances
+    cursors = []
+
+    def __init__(self, fig=None, color='r', style=':', blit=True, size=1,
                  mark_clicks=False, record_clicks=False,
                  click_button=1, remove_button=3, nclicks=1000,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
-        
+
         self.fig = plt.gcf() if fig is None else fig
-        
+
         self.cursor = None  # stores horizontal and vertical lines if active
         self.background = None  # this is for blitting
         self.press = False  # active when mouse is currently pressed
         self.just_released = False  # active only right after mouse click released
         self.blit = blit  # blitting allows for fast rendering
-        
+
         self.color = color
         if color not in Cursor.colors:
             Cursor.colors.append(color)
@@ -118,10 +126,10 @@ class Cursor:
 
         self.style = style
         self.size = size
-        
+
         self.visibility = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
         self.inaxes = False  # True when mouse is in axes
-        
+
         self.markclicks = mark_clicks
         self.recordclicks = record_clicks
         self.clickbutton = click_button
@@ -133,34 +141,27 @@ class Cursor:
         self.nclicks = nclicks  # maximum number of clicks, after which cursor is deactivated
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
-        
-        self.connect()  # figure is defined by the one the mouse is on
-        
+
+        self.connect()
+
         # below is to erase previous cursors on the figure -------------------
-        
+
         # list all cursors on the same figure
         fig_cursors = [c for c in Cursor.cursors if c.fig == self.fig]
-        
+
         for cursor in fig_cursors:
             i = Cursor.cursors.index(cursor)
             Cursor.cursors.pop(i)
             cursor.disconnect()
             del cursor
-        
+
         # put new cursor in list
         Cursor.cursors.append(self)
-        print(len(Cursor.cursors))
-            
-        
-            
-        
-        
-        
-        
+
     def __repr__(self):
-        
+
         base_message = f'Cursor on Fig. {self.fig.number}.'
-        
+
         if self.clickbutton == 1:
             button = "left"
         elif self.clickbutton == 2:
@@ -169,22 +170,22 @@ class Cursor:
             button = 'right'
         else:
             button = 'unknown'
-                
+
         if self.markclicks is True:
             add_message = f"Leaves '{self.marksymbol}' marks when {button} mouse button is pressed. "
         else:
             add_message = ''
-            
+
         if self.recordclicks is True:
             add_message += f'Positions of clicks with the {button} button is recorded in the clickdata attribute.'
         else:
             add_message += f'Positions of clicks not recorded.'
-        
+
         return base_message + ' ' + add_message
 
     def __str__(self):
         return f'Cursor on Fig. {self.fig.number}.'
-        
+
 # =========================== main cursor methods ============================
 
     def create(self, event):
@@ -221,13 +222,13 @@ class Cursor:
         self.fig.canvas.draw()
         self.cursor = None
         return
-    
+
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
-        
+
         if self.cursor is None:  # no need to update position if cursor not active
             return
-        
+
         canvas = self.fig.canvas
         hline, vline = self.cursor
         ax = self.ax
@@ -244,7 +245,7 @@ class Cursor:
             # without this line, the graph keeps all successive positions of
             # the cursor on the screen
             canvas.restore_region(self.background)
-             
+
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
@@ -256,7 +257,7 @@ class Cursor:
         hline.set_ydata([y, y])
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
-    
+
         if self.blit is True:
             ax.draw_artist(hline)
             ax.draw_artist(vline)
@@ -264,17 +265,17 @@ class Cursor:
             canvas.blit(self.ax.bbox)
         else:
             canvas.draw()
-            
+
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
         for mark in self.marks:
             mark.remove()
         self.fig.canvas.draw()
-        
+
     def erase_data(self):
         """Erase data of recorded clicks"""
         self.clickdata = []
-        
+
 
 # ============================ callback functions ============================
 
@@ -285,14 +286,14 @@ class Cursor:
     #     self.fig = event.canvas.figure
     #     self.connect()
     #     print(self.fig)
-    
+
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
 
         self.ax = event.inaxes
-        
+
         self.inaxes = True
-        
+
         if self.visibility is True:
             self.create(event)
 
@@ -304,17 +305,17 @@ class Cursor:
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
-        
+
         self.inaxes = False
-        
+
         if self.cursor is not None:
             self.erase()
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
-        if self.cursor is None: 
+        if self.cursor is None:
             return  # no active cursor --> do nothing
-        if self.press is True: 
+        if self.press is True:
             return  # to avoid weird interactions with zooming/panning
         self.update_position(event)
 
@@ -325,57 +326,57 @@ class Cursor:
 
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
-        
-        This is in order to accommodate potential zooming/panning 
-        (done later in on_motion function, using the just_released parameter, 
+
+        This is in order to accommodate potential zooming/panning
+        (done later in on_motion function, using the just_released parameter,
         it does not work if done here directly, not completely sure why).
         """
         self.press = False
         self.just_released = True
-        
+
         # without the line below, blitting mode keeps the cursor at time of
         # the click plotted permanently for some reason.
-        canvas = self.fig.canvas        
+        canvas = self.fig.canvas
         canvas.draw()
-        
+
         x, y = (event.xdata, event.ydata)
-        
-        
+
+
         if (x, y) == self.clickpos:  # this avoids recording clicks during panning/zooming
-            
+
             if event.button == self.clickbutton:
-            
+
                 if self.recordclicks is True:
                     self.clickdata.append((x, y))
                     self.clicknumber += 1
-                    
-                if self.markclicks is True: 
-                    mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color, 
+
+                if self.markclicks is True:
+                    mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color,
                                   markersize=self.marksize)
                     self.fig.canvas.draw()
                     self.marks.append(mark)
-                    
+
             elif event.button == self.removebutton:
-                
+
                 if self.recordclicks is True:
                     self.clicknumber -= 1
                     self.clickdata.pop(-1)  # remove last element
-                    
+
                 if self.markclicks is True:
                     mark = self.marks.pop(-1)
                     mark.remove()
                     self.fig.canvas.draw()
-        
+
         if self.clicknumber == self.nclicks:
             print('Maximum number of clicks reached. Cursor removed.')
             if self.cursor is not None:
                 self.erase()
             self.disconnect()
-                   
-        
+
+
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
-        
+
         All controls:
             - space bar: toggles cursor visibility
             - up/down arrows: increase or decrease cursor size
@@ -390,13 +391,13 @@ class Cursor:
                 self.visibility = False
                 if self.inaxes is True:
                     self.erase()
-                
+
         if event.key == "up":
             self.size += 0.5
-            
+
         if event.key == "down":
             self.size = self.size-0.5 if self.size>0.5 else 0.5
-         
+
         if event.key in ['left', 'right']:
             if event.key == "left":
                 self.colorindex -= 1
@@ -404,11 +405,11 @@ class Cursor:
                 self.colorindex += 1
             self.colorindex = self.colorindex % len(Cursor.colors)
             self.color = Cursor.colors[self.colorindex]
-                
+
         if event.key in ['right', 'left', 'up', 'down']:
             self.erase()  # easy way to not have to update artist
             self.create(event)
-            
+
         # the line below is a hack to be able to see the changes directly
         self.update_position(event)
 
@@ -443,16 +444,16 @@ class Cursor:
         self.fig.canvas.mpl_disconnect(self.releaseb_id)
         self.fig.canvas.mpl_disconnect(self.pressk_id)
         self.fig.canvas.mpl_disconnect(self.closefig_id)
-   
-    
+
+
 # ============================= ginput function ==============================
-   
+
 def ginput(*args, **kwargs):
     """Similar to matplotlib's ginput, but with cursor and zoom/pan enabled."""
     C = Cursor()            # create cursor
     plt.ginput(*args, **kwargs)
     del C
-    return       
+    return
 
 # ================================ direct run ================================
 
