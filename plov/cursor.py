@@ -7,10 +7,6 @@ a ginput function identical to the matplotlib ginput, but with a cursor.
 # TO DO -- use disconnect rather than erase? Same for visibility.
 # TO DO -- check cursor with several figures.
 # TO DO -- disconnect previous cursor from figure if another one is added.
-# TO DO -- check everything works without blitting as well.
-# TO DO -- add cancel button for ribosome laitier marks
-# TO DO -- replace aax, ffg by ax and fig
-# TO DO -- see if self.cursor and self.visibility need to be merged
 # TO DO -- allow cursor to go to another figure
 # TO DO -- Press enter to clear points
 
@@ -33,7 +29,8 @@ def main():
     
     plt.show()
 
-    #b = Cursor() # this does not seem to work while in main(), but works from console
+    b = Cursor() # this does not seem to work while in main(), but works from console
+    plt.ginput(2)
 
 # =============================== Cursor class ===============================
 
@@ -92,13 +89,13 @@ class Cursor:
     # (in addition to the one specified by the user)
     colors = ['r', 'b', 'k', 'w']
 
-    def __init__(self, figure=None, color='r', style=':', blit=True, size=1, 
+    def __init__(self, fig=None, color='r', style=':', blit=True, size=1, 
                  mark_clicks=False, record_clicks=False,
                  click_button=1, remove_button=3, nclicks=1000,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
         
-        self.ffg = plt.gcf() if figure is None else figure
+        self.fig = plt.gcf() if fig is None else fig
         
         self.cursor = None  # stores horizontal and vertical lines if active
         self.background = None  # this is for blitting
@@ -131,11 +128,16 @@ class Cursor:
         self.marks = []  # list containing all artists drawn
         
         self.connect()
+        
+        self.fig.canvas.draw()
+        
         plt.show()
+        
+        print("Cursor Initiated")
         
     def __repr__(self):
         
-        base_message = f'Cursor on Fig. {self.ffg.number}.'
+        base_message = f'Cursor on Fig. {self.fig.number}.'
         
         if self.clickbutton == 1:
             button = "left"
@@ -159,13 +161,13 @@ class Cursor:
         return base_message + ' ' + add_message
 
     def __str__(self):
-        return f'Cursor on Fig. {self.ffg.number}.'
+        return f'Cursor on Fig. {self.fig.number}.'
         
 # =========================== main cursor methods ============================
 
     def create(self, event):
         """Draw a cursor (h+v lines) that stop at the edge of the axes."""
-        ax = self.aax
+        ax = self.ax
 
         pos = (event.xdata, event.ydata)
         (x, y) = pos
@@ -194,7 +196,7 @@ class Cursor:
         (hline, vline) = self.cursor
         hline.remove()
         vline.remove()
-        self.ffg.canvas.draw()
+        self.fig.canvas.draw()
         self.cursor = None
         return
     
@@ -204,16 +206,16 @@ class Cursor:
         if self.cursor is None:  # no need to update position if cursor not active
             return
         
-        canvas = self.ffg.canvas
+        canvas = self.fig.canvas
         hline, vline = self.cursor
-        ax = self.aax
+        ax = self.ax
 
         # If the block below is incorporated in on_mouse_release only, it does not
         # work well, because it seems to get the background data before the
         # plot has been updated
         if self.just_released is True:
             if self.blit is True:
-                self.background = canvas.copy_from_bbox(self.aax.bbox)
+                self.background = canvas.copy_from_bbox(self.ax.bbox)
                 self.just_released = False
 
         if self.blit is True:
@@ -237,7 +239,7 @@ class Cursor:
             ax.draw_artist(hline)
             ax.draw_artist(vline)
             # without this below, the graph is not updated
-            canvas.blit(self.aax.bbox)
+            canvas.blit(self.ax.bbox)
         else:
             canvas.draw()
             
@@ -245,7 +247,7 @@ class Cursor:
         """Erase plotted clicks (marks) without removing click data"""
         for mark in self.marks:
             mark.remove()
-        self.ffg.canvas.draw()
+        self.fig.canvas.draw()
         
     def erase_data(self):
         """Erase data of recorded clicks"""
@@ -257,18 +259,18 @@ class Cursor:
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
 
-        self.aax = event.inaxes
+        self.ax = event.inaxes
         
         self.inaxes = True
         
         if self.visibility is True:
             self.create(event)
 
-        canvas = self.ffg.canvas
+        canvas = self.fig.canvas
         canvas.draw()
 
         if self.blit is True:
-            self.background = canvas.copy_from_bbox(self.aax.bbox)
+            self.background = canvas.copy_from_bbox(self.ax.bbox)
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
@@ -303,7 +305,7 @@ class Cursor:
         
         # without the line below, blitting mode keeps the cursor at time of
         # the click plotted permanently for some reason.
-        canvas = self.ffg.canvas        
+        canvas = self.fig.canvas        
         canvas.draw()
         
         x, y = (event.xdata, event.ydata)
@@ -318,9 +320,9 @@ class Cursor:
                     self.clicknumber += 1
                     
                 if self.markclicks is True: 
-                    mark, = self.aax.plot(x, y, marker=self.marksymbol, color=self.color, 
+                    mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color, 
                                   markersize=self.marksize)
-                    self.ffg.canvas.draw()
+                    self.fig.canvas.draw()
                     self.marks.append(mark)
                     
             elif event.button == self.removebutton:
@@ -332,7 +334,7 @@ class Cursor:
                 if self.markclicks is True:
                     mark = self.marks.pop(-1)
                     mark.remove()
-                    self.ffg.canvas.draw()
+                    self.fig.canvas.draw()
         
         if self.clicknumber == self.nclicks:
             print('Maximum number of clicks reached. Cursor removed.')
@@ -391,23 +393,23 @@ class Cursor:
 
     def connect(self):
         """Connect figure events to callback functions."""
-        self.enterax_id = self.ffg.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
-        self.leaveax_id = self.ffg.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
-        self.motion_id = self.ffg.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        self.pressb_id = self.ffg.canvas.mpl_connect('button_press_event', self.on_mouse_press)
-        self.releaseb_id = self.ffg.canvas.mpl_connect('button_release_event', self.on_mouse_release)
-        self.pressk_id = self.ffg.canvas.mpl_connect('key_press_event', self.on_key_press)
-        self.closefig_id = self.ffg.canvas.mpl_connect('close_event', self.on_close)
+        self.enterax_id = self.fig.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
+        self.leaveax_id = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
+        self.motion_id = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        self.pressb_id = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_press)
+        self.releaseb_id = self.fig.canvas.mpl_connect('button_release_event', self.on_mouse_release)
+        self.pressk_id = self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.closefig_id = self.fig.canvas.mpl_connect('close_event', self.on_close)
 
     def disconnect(self):
         """Disconnect figure events from callback functions."""
-        self.ffg.canvas.mpl_disconnect(self.enterax_id)
-        self.ffg.canvas.mpl_disconnect(self.leaveax_id)
-        self.ffg.canvas.mpl_disconnect(self.motion_id)
-        self.ffg.canvas.mpl_disconnect(self.pressb_id)
-        self.ffg.canvas.mpl_disconnect(self.releaseb_id)
-        self.ffg.canvas.mpl_disconnect(self.pressk_id)
-        self.ffg.canvas.mpl_disconnect(self.closefig_id)
+        self.fig.canvas.mpl_disconnect(self.enterax_id)
+        self.fig.canvas.mpl_disconnect(self.leaveax_id)
+        self.fig.canvas.mpl_disconnect(self.motion_id)
+        self.fig.canvas.mpl_disconnect(self.pressb_id)
+        self.fig.canvas.mpl_disconnect(self.releaseb_id)
+        self.fig.canvas.mpl_disconnect(self.pressk_id)
+        self.fig.canvas.mpl_disconnect(self.closefig_id)
    
     
 # ============================= ginput function ==============================
