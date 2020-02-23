@@ -11,6 +11,8 @@ a ginput function identical to the matplotlib ginput, but with a cursor.
 # TO DO -- add cancel button for ribosome laitier marks
 # TO DO -- replace aax, ffg by ax and fig
 # TO DO -- see if self.cursor and self.visibility need to be merged
+# TO DO -- allow cursor to go to another figure
+# TO DO -- Press enter to clear points
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,14 +55,23 @@ class Cursor:
     By default, color is red, style is dotted (:), size is 1.
     
     The cursor can leave marks and/or record click positions if there is a 
-    click with a specific button (by default, left mouse button). Options:
+    click with a specific button (by default, left mouse button). Clicks can
+    be cancelled with the remove button (by default, right mouse button).
+    Options:
         - mark_clicks (bool, False by default)
         - record_clicks (bool, if True, create a list of click positions)
         - click_button (1, 2, or 3 for left, middle, right mouse btn, default 1)
+        - remove_button (1, 2 or 3, default is 3, right click)
+        - nclicks : cursor is deactivated after nclicks clicks (useful for ginput)
         - mark_symbol (usual matplolib's symbols, default is '+')
         - mark_size (matplotlib's markersize)
         
     Note: currently, the mark color is always the same as the cursor.
+    
+    The marked clicks associated with a cursor can be removed with 
+    `Cursor.erase_marks()`
+    and the stored click data can be reset using
+    `Cursor.erase_data()`.
     
     Interactive Key shortcuts:
         - space bar: toggle cursor visitbility (on/off)
@@ -72,6 +83,9 @@ class Cursor:
 
     A small bug is that if I create one or several cursors within main()
     they do not show up. Typing Cursor() in the console works, though.
+    
+    Another "bug" is that the cursor does not reappear immediately after
+    panning/zooming if blitting is activated, but needs the mouse to move.
     """
     
     # Define colors the arrows will cycle through
@@ -80,7 +94,7 @@ class Cursor:
 
     def __init__(self, figure=None, color='r', style=':', blit=True, size=1, 
                  mark_clicks=False, record_clicks=False,
-                 click_button=1, 
+                 click_button=1, remove_button=3, nclicks=1000,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
         
@@ -107,11 +121,14 @@ class Cursor:
         self.markclicks = mark_clicks
         self.recordclicks = record_clicks
         self.clickbutton = click_button
+        self.removebutton = remove_button
         self.marksymbol = mark_symbol
         self.marksize = mark_size
-        self.clickpos = None # temporarily stores the click position
-        self.clicknumber = 0 # tracks the number of clicks with s
-        self.clickdata = [] # stores the (x, y) data of clicks in a list
+        self.clickpos = None  # temporarily stores the click position
+        self.clicknumber = 0  # tracks the number of clicks with s
+        self.nclicks = nclicks  # maximum number of clicks, after which cursor is deactivated
+        self.clickdata = []  # stores the (x, y) data of clicks in a list
+        self.marks = []  # list containing all artists drawn
         
         self.connect()
         plt.show()
@@ -181,12 +198,6 @@ class Cursor:
         self.cursor = None
         return
     
-    def delete(self):
-        """Delete cursor by erasing its lines and disconnecting callbacks."""
-        if self.cursor is not None:
-            self.erase()
-        self.disconnect()
-    
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
         
@@ -229,6 +240,16 @@ class Cursor:
             canvas.blit(self.aax.bbox)
         else:
             canvas.draw()
+            
+    def erase_marks(self):
+        """Erase plotted clicks (marks) without removing click data"""
+        for mark in self.marks:
+            mark.remove()
+        self.ffg.canvas.draw()
+        
+    def erase_data(self):
+        """Erase data of recorded clicks"""
+        self.clickdata = []
         
 
 # ============================ callback functions ============================
@@ -268,8 +289,7 @@ class Cursor:
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
         self.press=True
-        if event.button==self.clickbutton:
-            self.clickpos = (event.xdata, event.ydata)
+        self.clickpos = (event.xdata, event.ydata)
 
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
@@ -291,13 +311,35 @@ class Cursor:
         
         if (x, y) == self.clickpos:  # this avoids recording clicks during panning/zooming
             
-            if self.recordclicks is True:
-                self.clickdata.append((x, y))
+            if event.button == self.clickbutton:
+            
+                if self.recordclicks is True:
+                    self.clickdata.append((x, y))
+                    self.clicknumber += 1
+                    
+                if self.markclicks is True: 
+                    mark, = self.aax.plot(x, y, marker=self.marksymbol, color=self.color, 
+                                  markersize=self.marksize)
+                    self.ffg.canvas.draw()
+                    self.marks.append(mark)
+                    
+            elif event.button == self.removebutton:
                 
-            if self.markclicks is True: 
-                self.aax.plot(x, y, marker=self.marksymbol, color=self.color, 
-                              markersize=self.marksize)
-                self.ffg.canvas.draw()
+                if self.recordclicks is True:
+                    self.clicknumber -= 1
+                    self.clickdata.pop(-1)  # remove last element
+                    
+                if self.markclicks is True:
+                    mark = self.marks.pop(-1)
+                    mark.remove()
+                    self.ffg.canvas.draw()
+        
+        if self.clicknumber == self.nclicks:
+            print('Maximum number of clicks reached. Cursor removed.')
+            if self.cursor is not None:
+                self.erase()
+            self.disconnect()
+                   
         
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -340,7 +382,9 @@ class Cursor:
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""
-        self.delete()
+        if self.cursor is not None:
+            self.erase()
+        self.disconnect()
 
 
 # ================= connect/disconnect events and callbacks ==================
