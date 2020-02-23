@@ -14,7 +14,7 @@ See help of the Line class for options.
 ### Cursor class
 
 ``` python
-Cursor(figure=None, color='r', style=':', blit=True, size=1, mark_clicks=False, record_clicks=False, click_button=1, remove_button=3, nclicks=1000, mark_symbol='+', mark_size=10)
+Cursor(figure=None, color='r', style=':', blit=True, size=1, show_clicks=False, record_clicks=False, click_button=1, remove_button=3, nclicks=1000, mark_symbol='+', mark_size=10)
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -41,13 +41,21 @@ The cursor can leave marks and/or record click positions if there is a
 click with a specific button (by default, left mouse button). Clicks can
 be cancelled with the remove button (by default, right mouse button).
 Options:
-- `mark_clicks` (bool, False by default)
+- `show_clicks` (bool, False by default)
 - `record_clicks` (bool, if True, create a list of click positions)
-- `click_button` (1, 2, or 3 for left, middle, right mouse btn, default 1)
-- `remove_button` (1, 2 or 3, default is 3, right click)
-- `nclicks` : cursor is deactivated after nclicks clicks (useful for ginput)
+- `mouse_add` (1, 2, or 3 for left, middle, right mouse btn, default 1)
+- `mouse_pop` (1, 2 or 3, default is 3, right click)
+- `mouse_stop`(1, 2, or 3, default is 2, middle click)
+- `n` : cursor is deactivated after nclicks clicks (useful for ginput)
+- `block`: if True, blocks the input until nclicks is reached (useful for ginput)
+- `timeout`: in s, timeout for the blocking event (default : infinite (0))
 - `mark_symbol` (usual matplolib's symbols, default is '+')
 - `mark_size` (matplotlib's markersize)
+
+Note: as in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
+have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
+last one is the same as matplotlib's ginput, to avoid interactions with
+other matplotlib's interactive features (e.g. backspace for "back").
 
 Note: currently, the mark color is always the same as the cursor.
 
@@ -60,7 +68,7 @@ and the stored click data can be reset using
 
 ##### Examples
 ```python
-C = Cursor(record_clicks=True, mark_clicks=True, nclicks=5)
+C = Cursor(record_clicks=True, show_clicks=True, nclicks=5)
 ```
 creates a cursor that leaves a red cross at the points clicked and saves the
 corresponding position (x, y) data in a list, accessible with `C.clickdata`.
@@ -73,11 +81,23 @@ Cursor(blit=False, color='b', size=0.5, style='-')
 creates a thin blue cursor with continuous lines; it will be slower
 because of the blit=False option. The cursor can be thickened by using the
 up arrow and changed color by using the left/right arrows.
+
+```python
+hinput(4)
+```
+will return 4 points clicked on the figure (or managed with keystrokes)
     
 #### Interactive Key shortcuts
-- Space bar: toggle cursor visitbility (on/off).
-- Up/down arrows: increase or decrease size (linewidth).
-- Left/right arrows: cycle through different cursor colors.
+
+##### Cursor appearance
+- space bar: toggles cursor visibility
+- up/down arrows: increase or decrease cursor size
+- left/right arrows: cycles through colors
+
+##### Recording clicks for ginput-like functions
+- "a" : add point
+- "z" : cancel last point
+- enter : stop recording
 
 #### Notes
 - Using panning and zooming works with the cursor on; to enable this, 
@@ -98,3 +118,6 @@ Identical to Matplotlib's ginput, except that it uses a cursor.
 
 ## Python requirements
 Python : >= 3.6 (because of f-strings)
+
+## Author
+Olivier Vincent, 2019-2020.
