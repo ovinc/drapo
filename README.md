@@ -23,6 +23,9 @@ is not bound to specific axes: moving the mouse over different axes will
 plot the cursor in these other axes. Right now, the cursor is bound to a
 certain figure, however this could be changed easily.
 
+It is not allowed to have more than 1 cursor per figure, to avoid conflics 
+between cursors in blitting mode.
+
 #### How to use
 
 To initiate a cursor, just use `Cursor()`.

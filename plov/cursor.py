@@ -4,10 +4,10 @@ This module contains a Cursor class (cursor that moves with the mouse) and
 a ginput function identical to the matplotlib ginput, but with a cursor.
 """
 
-# TO DO -- use disconnect rather than erase? Same for visibility.
-# TO DO -- check cursor with several figures.
-# TO DO -- disconnect previous cursor from figure if another one is added.
-# TO DO -- allow cursor to go to another figure
+# TODO - To allow cursor to appear on multiple figures, it is necessary to 
+# connect figure events to callbacks for every existing figure --> do a figure list
+# and connect one by one.
+
 # TO DO -- Press enter to clear points
 
 import matplotlib.pyplot as plt
@@ -27,10 +27,15 @@ def main():
     ax1.plot(x, y, '-ob')
     ax2.plot(z, '-ok')
     
+    c1 = Cursor()
+    
+    fig2, ax3 = plt.subplots()
+    ax3.plot(y, x, '-ok')
+    
+    c2 = Cursor() # this does not seem to work while in main(), but works from console
+    
     plt.show()
-
-    b = Cursor() # this does not seem to work while in main(), but works from console
-    plt.ginput(2)
+    #plt.ginput(2)
 
 # =============================== Cursor class ===============================
 
@@ -88,6 +93,8 @@ class Cursor:
     # Define colors the arrows will cycle through
     # (in addition to the one specified by the user)
     colors = ['r', 'b', 'k', 'w']
+    
+    cursors = []  # list of Cursor instances
 
     def __init__(self, fig=None, color='r', style=':', blit=True, size=1, 
                  mark_clicks=False, record_clicks=False,
@@ -127,13 +134,28 @@ class Cursor:
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
         
-        self.connect()
+        self.connect()  # figure is defined by the one the mouse is on
         
-        self.fig.canvas.draw()
+        # below is to erase previous cursors on the figure -------------------
         
-        plt.show()
+        # list all cursors on the same figure
+        fig_cursors = [c for c in Cursor.cursors if c.fig == self.fig]
         
-        print("Cursor Initiated")
+        for cursor in fig_cursors:
+            i = Cursor.cursors.index(cursor)
+            Cursor.cursors.pop(i)
+            cursor.disconnect()
+            del cursor
+        
+        # put new cursor in list
+        Cursor.cursors.append(self)
+        print(len(Cursor.cursors))
+            
+        
+            
+        
+        
+        
         
     def __repr__(self):
         
@@ -256,6 +278,14 @@ class Cursor:
 
 # ============================ callback functions ============================
 
+    # def on_enter_figure(self, event):
+    #     """Attribute figure the mouse is on to the cursor"""
+    #     print(self.fig)
+    #     self.disconnect()
+    #     self.fig = event.canvas.figure
+    #     self.connect()
+    #     print(self.fig)
+    
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
 
@@ -391,8 +421,10 @@ class Cursor:
 
 # ================= connect/disconnect events and callbacks ==================
 
+
     def connect(self):
         """Connect figure events to callback functions."""
+        #self.enterfig_id = self.fig.canvas.mpl_connect('figure_enter_event', self.on_enter_figure)
         self.enterax_id = self.fig.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
         self.leaveax_id = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
         self.motion_id = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
@@ -403,6 +435,7 @@ class Cursor:
 
     def disconnect(self):
         """Disconnect figure events from callback functions."""
+        #self.fig.canvas.mpl_disconnect(self.enterfig_id)
         self.fig.canvas.mpl_disconnect(self.enterax_id)
         self.fig.canvas.mpl_disconnect(self.leaveax_id)
         self.fig.canvas.mpl_disconnect(self.motion_id)
