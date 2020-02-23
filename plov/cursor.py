@@ -4,8 +4,13 @@ This module contains a Cursor class (cursor that moves with the mouse) and
 a ginput function identical to the matplotlib ginput, but with a cursor.
 """
 
-# TO DO -- add function that returns click position
-
+# TO DO -- use disconnect rather than erase? Same for visibility.
+# TO DO -- check cursor with several figures.
+# TO DO -- disconnect previous cursor from figure if another one is added.
+# TO DO -- check everything works without blitting as well.
+# TO DO -- add cancel button for ribosome laitier marks
+# TO DO -- replace aax, ffg by ax and fig
+# TO DO -- see if self.cursor and self.visibility need to be merged
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,9 +30,6 @@ def main():
     ax2.plot(z, '-ok')
     
     plt.show()
-
-    a = ginput(3)
-    print(a)
 
     #b = Cursor() # this does not seem to work while in main(), but works from console
 
@@ -50,6 +52,16 @@ class Cursor:
     correspond to matplotlib's color, linestyle and linewidth respectively.
     By default, color is red, style is dotted (:), size is 1.
     
+    The cursor can leave marks and/or record click positions if there is a 
+    click with a specific button (by default, left mouse button). Options:
+        - mark_clicks (bool, False by default)
+        - record_clicks (bool, if True, create a list of click positions)
+        - click_button (1, 2, or 3 for left, middle, right mouse btn, default 1)
+        - mark_symbol (usual matplolib's symbols, default is '+')
+        - mark_size (matplotlib's markersize)
+        
+    Note: currently, the mark color is always the same as the cursor.
+    
     Interactive Key shortcuts:
         - space bar: toggle cursor visitbility (on/off)
         - up/down arrows: increase or decrease size (linewidth)
@@ -66,14 +78,19 @@ class Cursor:
     # (in addition to the one specified by the user)
     colors = ['r', 'b', 'k', 'w']
 
-    def __init__(self, figure=None, color='r', style=':', blit=True, size=1):
-        """Note: cursor drawn only when the mouse enters some axes."""
+    def __init__(self, figure=None, color='r', style=':', blit=True, size=1, 
+                 mark_clicks=False, record_clicks=False,
+                 click_button=1, 
+                 mark_symbol='+', mark_size=10):
+        """Note: cursor drawn only when the mouse enters axes."""
+        
         self.ffg = plt.gcf() if figure is None else figure
-        self.cursor = None
+        
+        self.cursor = None  # stores horizontal and vertical lines if active
         self.background = None  # this is for blitting
-        self.press = False
-        self.just_released = False
-        self.blit = blit
+        self.press = False  # active when mouse is currently pressed
+        self.just_released = False  # active only right after mouse click released
+        self.blit = blit  # blitting allows for fast rendering
         
         self.color = color
         if color not in Cursor.colors:
@@ -83,12 +100,46 @@ class Cursor:
 
         self.style = style
         self.size = size
-        self.visibility = True
+        
+        self.visibility = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
+        self.inaxes = False  # True when mouse is in axes
+        
+        self.markclicks = mark_clicks
+        self.recordclicks = record_clicks
+        self.clickbutton = click_button
+        self.marksymbol = mark_symbol
+        self.marksize = mark_size
+        self.clickpos = None # temporarily stores the click position
+        self.clicknumber = 0 # tracks the number of clicks with s
+        self.clickdata = [] # stores the (x, y) data of clicks in a list
+        
         self.connect()
         plt.show()
         
     def __repr__(self):
-        return f'Cursor on Fig. {self.ffg.number}.'
+        
+        base_message = f'Cursor on Fig. {self.ffg.number}.'
+        
+        if self.clickbutton == 1:
+            button = "left"
+        elif self.clickbutton == 2:
+            button = 'middle'
+        elif self.clickbutton == 3:
+            button = 'right'
+        else:
+            button = 'unknown'
+                
+        if self.markclicks is True:
+            add_message = f"Leaves '{self.marksymbol}' marks when {button} mouse button is pressed. "
+        else:
+            add_message = ''
+            
+        if self.recordclicks is True:
+            add_message += f'Positions of clicks with the {button} button is recorded in the clickdata attribute.'
+        else:
+            add_message += f'Positions of clicks not recorded.'
+        
+        return base_message + ' ' + add_message
 
     def __str__(self):
         return f'Cursor on Fig. {self.ffg.number}.'
@@ -138,9 +189,27 @@ class Cursor:
     
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
+        
+        if self.cursor is None:  # no need to update position if cursor not active
+            return
+        
+        canvas = self.ffg.canvas
         hline, vline = self.cursor
         ax = self.aax
 
+        # If the block below is incorporated in on_mouse_release only, it does not
+        # work well, because it seems to get the background data before the
+        # plot has been updated
+        if self.just_released is True:
+            if self.blit is True:
+                self.background = canvas.copy_from_bbox(self.aax.bbox)
+                self.just_released = False
+
+        if self.blit is True:
+            # without this line, the graph keeps all successive positions of
+            # the cursor on the screen
+            canvas.restore_region(self.background)
+             
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
@@ -152,18 +221,25 @@ class Cursor:
         hline.set_ydata([y, y])
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
-
+    
         if self.blit is True:
             ax.draw_artist(hline)
             ax.draw_artist(vline)
+            # without this below, the graph is not updated
+            canvas.blit(self.aax.bbox)
+        else:
+            canvas.draw()
+        
 
 # ============================ callback functions ============================
 
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
-        ax = event.inaxes
-        self.aax = ax
 
+        self.aax = event.inaxes
+        
+        self.inaxes = True
+        
         if self.visibility is True:
             self.create(event)
 
@@ -175,41 +251,25 @@ class Cursor:
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
+        
+        self.inaxes = False
+        
         if self.cursor is not None:
             self.erase()
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
-        if self.cursor is None: return  # no active cursor --> do nothing
-        if self.press is True: return  # to avoid weird interactions with zooming/panning
-
-        canvas = self.ffg.canvas
-
-        # If the block below is incorporated in on_mouse_release only, it does not
-        # work well, because it seems to get the backgorund data before the
-        # plot has been updated
-        if self.just_released is True:
-            if self.blit is True:
-                self.background = canvas.copy_from_bbox(self.aax.bbox)
-                self.just_released = False
-
-        if self.blit is True:
-            # without this line, the graph keeps all successive positions of
-            # the cursor on the screen
-            canvas.restore_region(self.background)
-        
-        # In this function, only the cursor lines are re-plotted
+        if self.cursor is None: 
+            return  # no active cursor --> do nothing
+        if self.press is True: 
+            return  # to avoid weird interactions with zooming/panning
         self.update_position(event)
-    
-        if self.blit is True:
-            # without this, the graph is not updated
-            canvas.blit(self.aax.bbox)
-        else:
-            canvas.draw()
 
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
         self.press=True
+        if event.button==self.clickbutton:
+            self.clickpos = (event.xdata, event.ydata)
 
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
@@ -226,6 +286,18 @@ class Cursor:
         canvas = self.ffg.canvas        
         canvas.draw()
         
+        x, y = (event.xdata, event.ydata)
+        
+        
+        if (x, y) == self.clickpos:  # this avoids recording clicks during panning/zooming
+            
+            if self.recordclicks is True:
+                self.clickdata.append((x, y))
+                
+            if self.markclicks is True: 
+                self.aax.plot(x, y, marker=self.marksymbol, color=self.color, 
+                              markersize=self.marksize)
+                self.ffg.canvas.draw()
         
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -235,13 +307,15 @@ class Cursor:
             - up/down arrows: increase or decrease cursor size
             - left/right arrows: cycles through colors
         """
-        if event.key == " ":
+        if event.key == " ":  # Space Bar
             if self.visibility is False:
-                self.create(event)
                 self.visibility = True
+                if self.inaxes is True:
+                    self.create(event)
             else:
-                self.erase()
                 self.visibility = False
+                if self.inaxes is True:
+                    self.erase()
                 
         if event.key == "up":
             self.size += 0.5
@@ -262,7 +336,7 @@ class Cursor:
             self.create(event)
             
         # the line below is a hack to be able to see the changes directly
-        self.on_motion(event)
+        self.update_position(event)
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""
@@ -288,19 +362,18 @@ class Cursor:
         self.ffg.canvas.mpl_disconnect(self.motion_id)
         self.ffg.canvas.mpl_disconnect(self.pressb_id)
         self.ffg.canvas.mpl_disconnect(self.releaseb_id)
+        self.ffg.canvas.mpl_disconnect(self.pressk_id)
         self.ffg.canvas.mpl_disconnect(self.closefig_id)
-        
-        
+   
+    
 # ============================= ginput function ==============================
-
+   
 def ginput(*args, **kwargs):
-    """Extension of matplotlib's ginput to include a cursor."""
+    """Similar to matplotlib's ginput, but with cursor and zoom/pan enabled."""
     C = Cursor()            # create cursor
-    result = plt.ginput(*args, **kwargs)
-    C.delete()
+    plt.ginput(*args, **kwargs)
     del C
-    return result
-
+    return       
 
 # ================================ direct run ================================
 
