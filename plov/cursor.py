@@ -257,8 +257,10 @@ class Cursor:
 
     def __str__(self):
         return f'Cursor on Fig. {self.fig.number}.'
+    
 
 # =========================== main cursor methods ============================
+        
 
     def create(self, event):
         """Draw a cursor (h+v lines) that stop at the edge of the axes."""
@@ -546,8 +548,10 @@ class Cursor:
             self.erase()
         self.disconnect()
         self.fig.canvas.stop_event_loop()
+        
 
 # ================= connect/disconnect events and callbacks ==================
+        
 
     def connect(self):
         """Connect figure events to callback functions."""

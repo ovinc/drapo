@@ -4,7 +4,9 @@
 # TODO: -- interactive initiation of line position (with ginput or equivalent)
 # TODO: -- add options of colors and style
 # TODO: -- add double click to "freeze" line to avoid moving it by mistake later
-# TODO: -- make program faster by saving canvas  before moving draglines (see matplotlib documentation)
+# TODO: -- make program faster by saving canvas  before moving draglines 
+# (see matplotlib documentation) --> for blitting it might be useful to set
+# all existing lines as set_animated = True and draw them all even if they're not moving
 
 
 import matplotlib.pyplot as plt
@@ -15,8 +17,7 @@ import math as m
 # ================================= example ==================================
 
 def main():
-    """ example of instances of draggable Lines in different figures and axes
-    """
+    """ example of instances of Lines in different figures and axes"""
     fig, ax = plt.subplots()
     ax.plot([1, 0], [11, 13], '-r')
 
@@ -29,12 +30,16 @@ def main():
 
     drag2 = Line()
 
+    z = np.random.randn(1000)
+
     fig3, (ax3, ax4) = plt.subplots(1, 2)
     ax3.plot(tt, xx)
+    ax4.plot(z, '-ob')
+
 
     Line()
 
-    plt.show()
+    plt.show(block=False)
 
 
 # ================================ line class ================================
@@ -52,23 +57,43 @@ class Line:
 
     draglines = []  # list of all instances of DragLines
 
-    def __init__(self, position=(0.2, 0.2, 0.8, 0.8), fig=None, ax=None, pickersize=5):
+    def __init__(self, position=(.2, .2, .8, .8), fig=None, ax=None, 
+                 pickersize=5, color='k',
+                 edgestyle='+', edgesize=10,
+                 linestyle='-', linewidth=1):
 
-        self.figure = plt.gcf() if fig is None else fig
-        self.axis = plt.gca() if ax is None else ax
+        self.fig = plt.gcf() if fig is None else fig
+        self.ax = plt.gca() if ax is None else ax
 
-        self.xlim = self.axis.get_xlim()
-        self.ylim = self.axis.get_ylim()
+        self.xlim = self.ax.get_xlim()
+        self.ylim = self.ax.get_ylim()
 
+        # set position of line on screen so that it does not overlap others
         x1, y1, x2, y2 = Line.set_position(self, position, pickersize)
 
-        pt1, = self.axis.plot(x1, y1, '.k', picker=pickersize)
-        pt2, = self.axis.plot(x2, y2, '.k', picker=pickersize)
+
+        # create edge points -------------------------------------------------
+        
+        pt1, = self.ax.plot(x1, y1, marker=edgestyle, color=color,
+                            markersize=edgesize, picker=edgesize)
+        pt2, = self.ax.plot(x2, y2, marker=edgestyle, color=color,
+                            markersize=edgesize, picker=edgesize)
 
         self.pt1 = pt1              # first point
         self.pt2 = pt2              # second point
-        self.line = self.linecon(pickersize)  # line connecting the points
+                
+        # create connecting line ---------------------------------------------
+        
+        x1, y1 = Line.get_pt_position(self.pt1)
+        x2, y2 = Line.get_pt_position(self.pt2)
 
+        ax = self.ax
+        l, = ax.plot([x1, x2], [y1, y2], picker=pickersize,
+                     linestyle='-', linewidth=linewidth, color=color)
+        
+        self.line = l
+        
+        # assemble lines and pts into "all" ----------------------------------
         self.all = (self.pt1, self.pt2, self.line)
 
         self.motionmode = None  # indicates if object moves as a whole ('line') or with just one edge moving ('point'); is None when object not moving
@@ -78,31 +103,34 @@ class Line:
 
         self.selected = set({})  # set that stores info about what parts of the line are selected (picked)
 
-        self.connect()  # connect to figure events
+        self.connect()  # connect to fig events
 
         Line.draglines.append(self)
         # print(f'{len(DragLine.draglines)} (init)')
 
-        # self.figure.canvas.draw()
-        self.axis.set_xlim(self.xlim)
-        self.axis.set_ylim(self.ylim)
-        self.figure.show()  # to pop up only figure where dragline is added
+        # self.fig.canvas.draw()
+        self.ax.set_xlim(self.xlim)
+        self.ax.set_ylim(self.ylim)
+        self.fig.show()  # to pop up only fig where dragline is added
 
     def __repr__(self):
-        drag_figures = [drag.figure for drag in Line.draglines]
-        ndragonfig = drag_figures.count(self.figure)
-        return f'Draggable Line #{ndragonfig} on Fig. {self.figure.number} \n'
+        drag_figs = [drag.fig for drag in Line.draglines]
+        ndragonfig = drag_figs.count(self.fig)
+        return f'Draggable Line #{ndragonfig} on Fig. {self.fig.number} \n'
 
     def __str__(self):
-        return 'Draggable Line on Fig. {self.figure.number}'
+        return 'Draggable Line on Fig. {self.fig.number}'
+    
+    
+# ============================ main line methods =============================
+        
 
     def set_position(self, position, pickersize):
-        """ sets position of new line, avoiding existing lines
-        """
+        """Set position of new line, avoiding existing lines"""
         mindist = 3*pickersize  # minimum distance between points in pixels, to avoid overlapping
         maxloop = 1e3  # maximum number of loops to try to put the new instance in a good position
 
-        ax = self.axis
+        ax = self.ax
 
         postopx = ax.transData  # transform between data coordinates and pixel coordinates
         pxtopos = ax.transData.inverted()  # pixels to data coordinates
@@ -122,7 +150,7 @@ class Line:
 
         for drag in Line.draglines:
 
-            if drag.axis is ax:  # if on same axis, record coordinates in a list to check overlap later
+            if drag.ax is ax:  # if on same axis, record coordinates in a list to check overlap later
 
                 x1b, y1b = Line.get_pt_position(drag.pt1)
                 x2b, y2b = Line.get_pt_position(drag.pt2)
@@ -171,37 +199,75 @@ class Line:
         y = ypt.item()
 
         return x, y
+    
+    def inactive_select(self):
 
-    def linecon(self, pickersize):
-        "connects two points with a line"
+        if self.active == None: return 'all'
+        if self.active == 'all': return None
+        if self.active == self.pt1: return self.pt2
+        if self.active == self.pt2: return self.pt1
+        
+    def update_position(self, event):
+        
+        x = event.xdata
+        y = event.ydata
 
-        x1, y1 = Line.get_pt_position(self.pt1)
-        x2, y2 = Line.get_pt_position(self.pt2)
+        if self.motionmode == 'point':  # move just one point, the other one stays fixed
 
-        ax = self.axis
-        l, = ax.plot([x1, x2], [y1, y2], '-k', picker=pickersize)
+            x_inact, y_inact = self.inactpos
 
-        return l
+            self.active.set_xdata(x)  # update position of active point
+            self.active.set_ydata(y)
 
+            self.line.set_xdata([x, x_inact])  # update position of line
+            self.line.set_ydata([y, y_inact])
 
-    def connect(self):
-        'connect object to figure canvas events'
+            self.fig.canvas.draw()
+            return
 
-        self.cidpress = self.figure.canvas.mpl_connect('button_press_event', self.on_press)
-        self.cidrelease = self.figure.canvas.mpl_connect('button_release_event', self.on_release)
-        self.cidmotion = self.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        self.cidpick = self.figure.canvas.mpl_connect('pick_event', self.on_pick)
-        self.cidaxleave = self.figure.canvas.mpl_connect('axes_leave_event', self.on_release)  # consider that leaving axes is the same as releasing mouse
-        self.cidclose = self.figure.canvas.mpl_connect('close_event', self.on_close)
+        if self.motionmode == 'line':  # move the line as a whole in a parallel fashion
+
+            x1, y1, x2, y2, xpress, ypress = self.press  # get where click was initially made
+
+            dx = x - xpress             # calculate motion
+            dy = y - ypress
+
+            self.pt1.set_xdata(x1+dx)
+            self.pt1.set_ydata(y1+dy)
+
+            self.pt2.set_xdata(x2+dx)
+            self.pt2.set_ydata(y2+dy)
+
+            self.line.set_xdata([x1+dx, x2+dx])
+            self.line.set_ydata([y1+dy, y2+dy])
+
+            self.fig.canvas.draw()
+            return
+    
+    def erase(self):
+
+        self.pt1.remove()
+        self.pt2.remove()
+        self.line.remove()
+
+        # self.disconnect()  # useful ?
+
+        Line.draglines.remove(self)
+        #print(f'{len(DragLine.draglines)} (delete)')
+
+        del self
+
+        
+# ============================ callback functions ============================
+
 
     def on_pick(self, event):
-        """if picked, save picked objects, or delete objects if right click
-        """
+        """If picked, save picked objects, or delete objects if right click"""
         selected = event.artist
 
         if event.mouseevent.button == 3 and (selected is self.line):  # right click anywhere on the line, including ends, and it removes the line
-            self.remove_dragline()
-            self.figure.canvas.draw()
+            self.erase()
+            self.fig.canvas.draw()
             return
 
         if selected in self.all:
@@ -222,7 +288,7 @@ class Line:
 
             self.motionmode = 'point'
 
-        if len(self.selected) == 1:
+        if len(self.selected) == 1:  # in this case, line selected and needs to be moved as a whole
 
             x1, y1 = Line.get_pt_position(self.pt1)
             x2, y2 = Line.get_pt_position(self.pt2)
@@ -232,51 +298,10 @@ class Line:
 
             self.motionmode = 'line'
 
-    def inactive_select(self):
-
-        if self.active == None: return 'all'
-        if self.active == 'all': return None
-        if self.active == self.pt1: return self.pt2
-        if self.active == self.pt2: return self.pt1
-
     def on_motion(self, event):
 
-        if self.motionmode==None: return
-
-        x = event.xdata
-        y = event.ydata
-
-        if self.motionmode == 'point':  # move just one point, the other one stays fixed
-
-            x_inact, y_inact = self.inactpos
-
-            self.active.set_xdata(x)  # update position of active point
-            self.active.set_ydata(y)
-
-            self.line.set_xdata([x, x_inact])  # update position of line
-            self.line.set_ydata([y, y_inact])
-
-            self.figure.canvas.draw()
-            return
-
-        if self.motionmode == 'line':  # move the line as a whole in a parallel fashion
-
-            x1, y1, x2, y2, xpress, ypress = self.press  # get where click was initially made
-
-            dx = x - xpress             # calculate motion
-            dy = y - ypress
-
-            self.pt1.set_xdata(x1+dx)
-            self.pt1.set_ydata(y1+dy)
-
-            self.pt2.set_xdata(x2+dx)
-            self.pt2.set_ydata(y2+dy)
-
-            self.line.set_xdata([x1+dx, x2+dx])
-            self.line.set_ydata([y1+dy, y2+dy])
-
-            self.figure.canvas.draw()
-            return
+        if self.motionmode==None: return 
+        self.update_position(event)
 
     def on_release(self, event):
 
@@ -291,26 +316,32 @@ class Line:
         if self in Line.draglines:
             Line.draglines.remove(self)
             # print(f'{len(DragLine.draglines)} (close)')
+            
+        self.disconnect()
+        
+        
+# ================= connect/disconnect events and callbacks ==================
+        
+        
+    def connect(self):
+        'connect object to figure canvas events'
 
-        self.figure.canvas.mpl_disconnect(self.cidpress)
-        self.figure.canvas.mpl_disconnect(self.cidrelease)
-        self.figure.canvas.mpl_disconnect(self.cidmotion)
-        self.figure.canvas.mpl_disconnect(self.cidpick)
-        self.figure.canvas.mpl_disconnect(self.cidaxleave)
-        self.figure.canvas.mpl_disconnect(self.cidclose)
-
-    def remove_dragline(self):
-
-        self.pt1.remove()
-        self.pt2.remove()
-        self.line.remove()
-
-        # self.disconnect()  # useful ?
-
-        Line.draglines.remove(self)
-        #print(f'{len(DragLine.draglines)} (delete)')
-
-        del self
+        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.on_press)
+        self.cidrelease = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
+        self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        self.cidpick = self.fig.canvas.mpl_connect('pick_event', self.on_pick)
+        self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event', self.on_release)  # consider that leaving axes is the same as releasing mouse
+        self.cidclose = self.fig.canvas.mpl_connect('close_event', self.on_close)
+    
+    def disconnect(self):
+        'disconnect callback ids'
+        self.fig.canvas.mpl_disconnect(self.cidpress)
+        self.fig.canvas.mpl_disconnect(self.cidrelease)
+        self.fig.canvas.mpl_disconnect(self.cidmotion)
+        self.fig.canvas.mpl_disconnect(self.cidpick)
+        self.fig.canvas.mpl_disconnect(self.cidaxleave)
+        self.fig.canvas.mpl_disconnect(self.cidclose)
+        
 
 # ================================ direct run ================================
 
