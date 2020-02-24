@@ -76,7 +76,7 @@ All parameters optional so that a cursor can be created by `Cursor()`.
 - `record_clicks` (bool, default False). Create a list of click positions.
 
 The 3 following parameters can be 1, 2, 3 (left, middle, right mouse btns).
-- `mouse_add` (int, default 1). 
+- `mouse_add` (int, default 1). Adds a (x, y) point by clicking.
 - `mouse_pop` (int, default 3). Removes most recently added point.
 - `mouse_stop`(int, default 2). Stops click recording. Same as reaching n.
 
