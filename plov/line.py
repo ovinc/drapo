@@ -41,7 +41,14 @@ def main():
 
 
 class Line:
-    """ Two dots connected by a line, draggable by its ends (the dots)"""
+    """ Two dots connected by a line, draggable by its ends (the dots)
+    
+    - Creates a draggable line on a matplotlib figure/axes.
+    - Right-click to remove line.
+    - If mouse leaves axes, control over the line is lost.
+
+    To initiate a line, just use `Line()`.
+    """
 
     draglines = []  # list of all instances of DragLines
 

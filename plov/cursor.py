@@ -68,58 +68,91 @@ class Cursor:
     plot the cursor in these other axes. Right now, the cursor is bound to a
     certain figure, however this could be changed easily.
 
-    It is not allowed to have more than 1 cursor per figure, to avoid conflics
-    between cursors in blitting mode.
+    Cursor style can be modified with the options `color`, `style` and `width`,
+    which correspond to matplotlib's color, linestyle and linewidth respectively.
+    By default, color is red, style is dotted (:), width is 1.
+    
+    Cursor apparance can also be changed by specific key strokes:
+        - space bar to toggle visibility (on/off)
+        - up/down arrows: increase or decrease width (linewidth)
+        - left/right arrows: cycle through different cursor colors
 
-    Blitting enables smooth motion of the cursor (high fps), but can be
-    deactivated with the option blit=False (by default, blit=True).
-
-    Cursor style can be modified with the options color, style and size, which
-    correspond to matplotlib's color, linestyle and linewidth respectively.
-    By default, color is red, style is dotted (:), size is 1.
-
-    The cursor can leave marks and/or record click positions if there is a 
-    click with a specific button (by default, left mouse button). Clicks can
-    be cancelled with the remove button (by default, right mouse button).
-    Options:
-        - `show_clicks` (bool, False by default)
-        - `record_clicks` (bool, if True, create a list of click positions)
-        - `mouse_add` (1, 2, or 3 for left, middle, right mouse btn, default 1)
-        - `mouse_pop` (1, 2 or 3, default is 3, right click)
-        - `mouse_stop`(1, 2, or 3, default is 2, middle click)
-        - `n` : cursor is deactivated after nclicks clicks (useful for ginput)
-        - `block`: if True, blocks the input until nclicks is reached (useful for ginput)
-        - `timeout`: in s, timeout for the blocking event (default : infinite (0))
-        - `mark_symbol` (usual matplolib's symbols, default is '+')
-        - `mark_size` (matplotlib's markersize)
+    The cursor can also leave marks and/or record click positions if there is 
+    a click with a specific button (by default, left mouse button). Clicks can
+    be removed with the remove button (by default, right mouse button), and
+    stopped with the stop button (by default, middle mouse button).
+    
+    Addition / removal / stop of clicks are also achieved by key strokes:
+        - 'a' for addition (corresponds to left click)
+        - 'z' for removal (corresponds to right click)
+        - 'enter' for stopping clicks (corresponds to middle click)
         
-    Note: as in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
+    Parameters
+    ----------
+    All parameters optional so that a cursor can be created by `Cursor()`.
+    
+    - `fig` (matplotlib figure, default: current figure, specified as None).
+    - `color` (matplotlib's color, default: red, i.e. 'r').
+    - `style` (matplotlib's linestyle, default: dotted ':').
+    - `width` (float, default: 1.0). Line width.
+    - `blit` (bool, default: True). Blitting for performance.
+    - `show_clicks` (bool, default:False). Mark location of clicks.
+    - `record_clicks` (bool, default False). Create a list of click positions.
+    
+    The 3 following parameters can be 1, 2, 3 (left, middle, right mouse btns).
+    - `mouse_add` (int, default 1). 
+    - `mouse_pop` (int, default 3). Removes most recently added point.
+    - `mouse_stop`(int, default 2). Stops click recording. Same as reaching n.
+    
+    The 3 following parameters are useful for ginput-like functions.
+    - `n` (int, default 1000). Cursor deactivates after n clicks.
+    - `block` (bool, default False). Block console until nclicks is reached.
+    - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
+    
+    The last 2 parameters customize appearance of click marks when shown.
+    - `mark_symbol` (matplolib's symbol, default: '+')
+    - `mark_size` (matplotlib's markersize, default 10)
+    
+    
+    Useful class methods
+    --------------------
+    
+    - `erase_marks()`: erase click marks on the plot. 
+    - `erase_data()`: reset recorded click data.
+    
+    The methods `create` and `erase` are used internally within the class and
+    are not meant for the user.
+    
+    Useful class attributes
+    -----------------------
+    
+    - `fig`: matplotlib figure the cursor is active in. Fixed.
+    - `ax`: matplotlib axes the cursor is active in. Changes in subplots.
+    - `visibility`: bool, sets whether cursor drawn or not when in axes.
+    - `inaxes`: book, true when mouse (and thus cursor) is in axes
+    - `clicknumber`: track the number of recorded clicks.
+    - `clickdata`: stores the (x, y) data of clicks in a list.
+    - `marks`: list of matplotlib artists containing all click marks drawn.
+        
+    Notes
+    -----
+    
+    - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
     have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
     last one is the same as matplotlib's ginput, to avoid interactions with
     other matplotlib's interactive features (e.g. backspace for "back").
 
-    Note: currently, the mark color is always the same as the cursor.
+    - Currently, the mark color is always the same as the cursor.
+    
+    - It is not allowed to have more than 1 cursor per figure, to avoid 
+    conflics between cursors in blitting mode.
 
-    The marked clicks associated with a cursor can be removed with
-    `Cursor.erase_marks()`
-    and the stored click data can be reset using
-    `Cursor.erase_data()`.
-
-    Interactive Key shortcuts:
-        - space bar: toggle cursor visitbility (on/off)
-        - up/down arrows: increase or decrease size (linewidth)
-        - left/right arrows: cycle through different cursor colors
-
-    Using panning and zooming works with the cursor on; to enable this,
+    - Using panning and zooming works with the cursor on; to enable this,
     blitting is temporarily suspended during a click+drag event.
 
-    A small bug is that if I create one or several cursors within main()
-    they do not show up. Typing Cursor() in the console works, though.
+    - As a result, the cursor does not reappear immediately after panning or
+    zooming if blitting is activated, but one needs to move the mouse.
 
-    Another "bug" is that the cursor does not reappear immediately after
-    panning/zooming if blitting is activated, but needs the mouse to move.
-    
-    O.Vincent, 2019-2020
     """
 
     # Define colors the arrows will cycle through
@@ -129,7 +162,7 @@ class Cursor:
     # list of Cursor instances
     cursors = []
 
-    def __init__(self, fig=None, color='r', style=':', blit=True, size=1,
+    def __init__(self, fig=None, color='r', style=':', width=1, blit=True,
                  show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0, 
@@ -151,7 +184,7 @@ class Cursor:
         self.colorindex = Cursor.colors.index(color)
 
         self.style = style
-        self.size = size
+        self.width = width
 
         self.visibility = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
         self.inaxes = False  # True when mouse is in axes
@@ -238,10 +271,10 @@ class Cursor:
 
         # horizontal and vertical cursor lines, the animated option is for blitting
         hline, = ax.plot([xmin, xmax], [y, y], color=self.color,
-                         linewidth=self. size, linestyle=self.style,
+                         linewidth=self. width, linestyle=self.style,
                          animated=self.blit)
         vline, = ax.plot([x, x], [ymin, ymax], color=self.color,
-                         linewidth=self.size, linestyle=self.style,
+                         linewidth=self.width, linestyle=self.style,
                          animated=self.blit)
 
         # because plotting the lines changes the initial xlim, ylim
@@ -439,10 +472,10 @@ class Cursor:
                     self.erase()
 
         if event.key == "up":
-            self.size += 0.5
+            self.width += 0.5
 
         if event.key == "down":
-            self.size = self.size-0.5 if self.size>0.5 else 0.5
+            self.width = self.width-0.5 if self.width>0.5 else 0.5
 
         if event.key in ['left', 'right']:
             if event.key == "left":
@@ -542,8 +575,14 @@ class Cursor:
 
 
 def ginput(*args, **kwargs):
-    """Similar to matplotlib's ginput, but with cursor."""
-    c = Cursor() 
+    """Identical to matplotlib's ginput, with added cursor for easier clicking.
+
+    Key shortcuts and mouse clicks follow matplotlib's behavior. The Cursor 
+    class only acts on the cursor here (appearance, with key Cursor class 
+    associated key shortcuts), not on the clicking and data recording which
+    follow matplotlib ginput. See matplotlib.pyplot.ginput for help.
+    """
+    c = Cursor(record_clicks=False, show_clicks=False, block=False) 
     data = plt.ginput(*args, **kwargs)
     del c
     return data
@@ -552,7 +591,26 @@ def ginput(*args, **kwargs):
 def hinput(n=1, timeout=0, show_clicks=True,
            mouse_add=1, mouse_pop=3, mouse_stop=2,
            blit=True):
-    """Contrary to ginput, zooming/panning does not add extra click data"""
+    """Similar to ginput, but zooming/panning does not add extra click data.
+    
+    Here, contrary to ginput, key shortcuts and mouse clicks follow the
+    plov Cursor class behavior, in particular the key shortcuts are
+    `a`, `z`, `enter` instead of any key, backspace and enter. See 
+    Cursor class documentation for more info. All Cursor class interactive
+    features are usable.
+    
+    Parameters
+    ----------
+    
+    Parameters are exactly the same as matplotlib.pyplot.ginput, with only an
+    additional one: blit (bool, default True): blitting for performance.
+    
+    Returns
+    -------
+    
+    List of tuples corresponding to the list of clicked (x, y) coordinates.
+    
+    """
     c = Cursor(block=True, record_clicks=True, show_clicks=show_clicks, n=n,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
                blit=blit)

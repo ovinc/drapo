@@ -1,11 +1,12 @@
 from setuptools import setup, find_packages
+import plov
 
 with open("README.md", "r") as f:
     long_description = f.read()
 
 setup(
         name='plov',
-        version="0.7",
+        version=plov.__version__,
         author='Olivier Vincent',
         author_email='olivier.vincent@univ-lyon1.fr',
         url='https://cameleon.univ-lyon1.fr/ovincent/plot-ov',
@@ -18,5 +19,6 @@ setup(
             "License :: OSI Approved :: BSD License",
             "Operating System :: OS Independent",
         ],
+        setup_requires=['matplotlib', 'numpy'],
         python_requires='>=3.6'
 )
