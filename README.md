@@ -2,29 +2,67 @@
 
 ## General information on contents
 
-*Cursor* is a class that creates a cursor that follows the mouse.
+`Cursor` is a class that creates a cursor that follows the mouse.
 
 Based on the Cursor class are the following functions:
 - `ginput` the same as matplotlib's ginput, but with a cursor.
 - `hinput` is ginput (with cursor) but also with zooming/panning abilities.
 
-*Line* is a class that creates a draggable line.
+`Line` is a class that creates a draggable line.
 
 ## Documentation
 
 ### Line class
 
+Interactive draggable line on matplotlib figure/axes.
+
 ```python
-Line(position=(0.2, 0.2, 0.8, 0.8), fig=None, ax=None, pickersize=5)
+Line(pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
+                 pickersize=5, color='k',
+                 edgestyle='.', edgesize=5,
+                 linestyle='-', linewidth=1)
 ```
 
-Two dots connected by a line, draggable by its ends (the dots)
-    
-- Creates a draggable line on a matplotlib figure/axes.
-- Right-click to remove line.
-- If mouse leaves axes, control over the line is lost.
+The line is composed of three elements : two points at the edge (pt1, pt2)
+and the line between them (link), with customizable appearance.
 
-To initiate a line, just use `Line()`.
+Dragging the line can be done in two different ways:
+- clicking on one edge: then the other edge is fixed during motion
+- clicking on the line itself: then the line moves as a whole
+
+Right-clicking removes and deletes the line.
+
+#### Parameters
+
+All parameters optional so that a line can simply be created by `Line()`.
+
+- `pos` (4-tuple, default: (.2, .2, .8, .8)). Initial position in axes.
+- `fig` (matplotlib figure, default: current figure, specified as None).
+- `ax` (matplotlib axes, default: current axes, specified as None).
+- 'pickersize' (float, default: 5), tolerance for line picking.
+- `color` (matplotlib's color, default: red, i.e. 'r').
+
+Appearance of the edge points (pt1, pt2):
+- `edgestyle` (matplotlib's marker, default: dot '.').
+- `edgesize` (float, default: 5). Marker size.
+
+Appearance of the connecting line (link):
+- `linestyle` (matplotlib's linestyle, default: continous '-').
+- `linewidth` (float, default: 1). Line width.
+
+#### Notes
+
+- For now, control over a line is lost when the mouse exits the axes. If
+this happens, just bring the mouse back in the axes and click on the line.
+- When instanciating a line, there is a check to see if any of the edges
+overlap with an edge of an existing line. If it's the case, the line is
+shited (up and left) to avoid overlapping.
+- If edges of different lines overlap at some point, it is easy to
+separate them by clicking on one of the lines, away from the edges, to
+drag it awway.
+- If two lines coincide completely (within pickersize), it is however not
+possible to separate them again. Best is to consider them as a single line
+and instanciate another line.
 
 ### Cursor class
 
@@ -63,7 +101,7 @@ Addition / removal / stop of clicks are also achieved by key strokes:
 - `z` for removal (corresponds to right click)
 - `enter` for stopping clicks (corresponds to middle click).
     
-### Parameters
+#### Parameters
 
 All parameters optional so that a cursor can be created by `Cursor()`.
 
@@ -90,7 +128,7 @@ The last 2 parameters customize appearance of click marks when shown.
 - `mark_size` (matplotlib's markersize, default 10)
 
 
-### Useful class methods
+#### Useful class methods
 
 - `erase_marks()`: erase click marks on the plot. 
 - `erase_data()`: reset recorded click data.
@@ -98,7 +136,7 @@ The last 2 parameters customize appearance of click marks when shown.
 The methods `create` and `erase` are used internally within the class and
 are not meant for the user.
 
-### Useful class attributes
+#### Useful class attributes
 
 - `fig`: matplotlib figure the cursor is active in. Fixed.
 - `ax`: matplotlib axes the cursor is active in. Changes in subplots.
@@ -108,7 +146,7 @@ are not meant for the user.
 - `clickdata`: stores the (x, y) data of clicks in a list.
 - `marks`: list of matplotlib artists containing all click marks drawn.
     
-### Notes
+#### Notes
 
 - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
 have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
@@ -123,7 +161,7 @@ blitting is temporarily suspended during a click+drag event.
 zooming if blitting is activated, but one needs to move the mouse.
 
 
-## ginput function
+### ginput function
 
 Identical to matplotlib's ginput, with added cursor for easier clicking.
 
@@ -136,7 +174,7 @@ class only acts on the cursor here (appearance, with key Cursor class
 associated key shortcuts), not on the clicking and data recording which
 follow matplotlib ginput. See matplotlib.pyplot.ginput for help. 
 
-## hinput function
+### hinput function
 
 Similar to ginput, but zooming/panning does not add extra click data.
 
@@ -152,17 +190,23 @@ plov Cursor class behavior, in particular the key shortcuts are
 Cursor class documentation for more info. All Cursor class interactive
 features are usable.
 
-### Parameters
+#### Parameters
 
 Parameters are exactly the same as matplotlib.pyplot.ginput, with only an
 additional one: blit (bool, default True): blitting for performance.
 
-### Returns
+#### Returns
 
 List of tuples corresponding to the list of clicked (x, y) coordinates.
 
 
 ## Examples
+
+```python
+Line(color='r', edgestyle='+', edgesize=10, linestyle=':', linewidth=2):
+```
+creates a thick red, dotted draggable line, with edges drawn as large crosses.
+
 ```python
 C = Cursor(record_clicks=True, show_clicks=True, nclicks=5)
 ```

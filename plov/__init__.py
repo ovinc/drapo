@@ -14,4 +14,4 @@ from .cursor import ginput
 from .cursor import hinput
 from .line import Line
 
-__version__ = 0.7
+__version__ = 0.8
