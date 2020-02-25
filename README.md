@@ -200,6 +200,16 @@ additional one: blit (bool, default True): blitting for performance.
 List of tuples corresponding to the list of clicked (x, y) coordinates.
 
 
+### ClickFig class
+
+Mouse that activates figures and axes by hovering and clicking.
+Just type `ClickFig()`, and click on some axes to make them the current ones,
+or on a figure to make it the current one.
+
+A better usage might be to do `c = ClickFig()`, then `del c` to remove the
+active mouse and be able to continue working without the active option.
+
+
 ## Examples
 
 ```python

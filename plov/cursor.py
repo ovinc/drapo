@@ -12,7 +12,7 @@ a ginput function identical to the matplotlib ginput, but with a cursor.
 
 # TODO -- create function draw() which adds points without saving anything
 
-# TODO -- merge key and mouse events management to avoid duplicates
+# TODO -- merge key and mouse events management code to avoid duplicates
 
 
 import matplotlib.pyplot as plt

@@ -13,5 +13,6 @@ from .cursor import Cursor
 from .cursor import ginput
 from .cursor import hinput
 from .line import Line
+from .clickfig import ClickFig
 
-__version__ = 0.8
+__version__ = 0.9
