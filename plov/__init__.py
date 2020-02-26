@@ -15,4 +15,4 @@ from .cursor import hinput
 from .line import Line
 from .clickfig import ClickFig
 
-__version__ = 0.9
+__version__ = 0.10

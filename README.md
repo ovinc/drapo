@@ -1,6 +1,7 @@
 # Plot-OV (plov) - Additional interactive Matplotlib features
 
-## General information on contents
+## General information
+----------------------
 
 `Cursor` is a class that creates a cursor that follows the mouse.
 
@@ -10,9 +11,8 @@ Based on the Cursor class are the following functions:
 
 `Line` is a class that creates a draggable line.
 
-## Documentation
-
-### Line class
+## Line class
+-------------
 
 Interactive draggable line on matplotlib figure/axes.
 
@@ -32,7 +32,7 @@ Dragging the line can be done in two different ways:
 
 Right-clicking removes and deletes the line.
 
-#### Parameters
+### Parameters
 
 All parameters optional so that a line can simply be created by `Line()`.
 
@@ -50,7 +50,7 @@ Appearance of the connecting line (link):
 - `linestyle` (matplotlib's linestyle, default: continous '-').
 - `linewidth` (float, default: 1). Line width.
 
-#### Notes
+### Notes
 
 - For now, control over a line is lost when the mouse exits the axes. If
 this happens, just bring the mouse back in the axes and click on the line.
@@ -64,7 +64,8 @@ drag it awway.
 possible to separate them again. Best is to consider them as a single line
 and instanciate another line.
 
-### Cursor class
+## Cursor class
+---------------
 
 Cursor following the mouse on any axes of a single figure.
 
@@ -101,7 +102,7 @@ Addition / removal / stop of clicks are also achieved by key strokes:
 - `z` for removal (corresponds to right click)
 - `enter` for stopping clicks (corresponds to middle click).
     
-#### Parameters
+### Parameters
 
 All parameters optional so that a cursor can be created by `Cursor()`.
 
@@ -128,7 +129,7 @@ The last 2 parameters customize appearance of click marks when shown.
 - `mark_size` (matplotlib's markersize, default 10)
 
 
-#### Useful class methods
+### Useful class methods
 
 - `erase_marks()`: erase click marks on the plot. 
 - `erase_data()`: reset recorded click data.
@@ -136,7 +137,7 @@ The last 2 parameters customize appearance of click marks when shown.
 The methods `create` and `erase` are used internally within the class and
 are not meant for the user.
 
-#### Useful class attributes
+### Useful class attributes
 
 - `fig`: matplotlib figure the cursor is active in. Fixed.
 - `ax`: matplotlib axes the cursor is active in. Changes in subplots.
@@ -146,7 +147,7 @@ are not meant for the user.
 - `clickdata`: stores the (x, y) data of clicks in a list.
 - `marks`: list of matplotlib artists containing all click marks drawn.
     
-#### Notes
+### Notes
 
 - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
 have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
@@ -161,7 +162,8 @@ blitting is temporarily suspended during a click+drag event.
 zooming if blitting is activated, but one needs to move the mouse.
 
 
-### ginput function
+## ginput function
+------------------
 
 Identical to matplotlib's ginput, with added cursor for easier clicking.
 
@@ -174,7 +176,8 @@ class only acts on the cursor here (appearance, with key Cursor class
 associated key shortcuts), not on the clicking and data recording which
 follow matplotlib ginput. See matplotlib.pyplot.ginput for help. 
 
-### hinput function
+## hinput function
+-------------------
 
 Similar to ginput, but zooming/panning does not add extra click data.
 
@@ -190,24 +193,42 @@ plov Cursor class behavior, in particular the key shortcuts are
 Cursor class documentation for more info. All Cursor class interactive
 features are usable.
 
-#### Parameters
+### Parameters
 
 Parameters are exactly the same as matplotlib.pyplot.ginput, with only an
 additional one: blit (bool, default True): blitting for performance.
 
-#### Returns
+### Returns
 
 List of tuples corresponding to the list of clicked (x, y) coordinates.
 
 
-### ClickFig class
+## ClickFig class
+-----------------
 
 Mouse that activates figures and axes by hovering and clicking.
-Just type `ClickFig()`, and click on some axes to make them the current ones,
-or on a figure to make it the current one.
 
-A better usage might be to do `c = ClickFig()`, then `del c` to remove the
-active mouse and be able to continue working without the active option.
+```python
+ClickFig(n=-1, highlight=True)
+```
+    
+- Left Click on figure / axes to make them the current ones in Matplotlib.
+- Right Click anywhere to deactivate the interactive mouse.
+
+Use `ClickFig()` to make the interactive mouse active, and select active axes 
+at will while still working on them. Use `ClickFig(highlight=False)` to not 
+see background color change during hovering.
+
+For just one-time selection, use `ClickFig(1)`. The background colors
+return to their original values once the ClickFig is deactivated (here, 
+after one click).
+
+Parameters
+----------
+- n (int, default -1, i.e. forever): maximum number of clicks allowed.
+- highlight (bool, default True): change ax/fig color when mouse on them.
+"""
+
 
 
 ## Examples
@@ -236,14 +257,28 @@ up arrow and changed color by using the left/right arrows.
 hinput(4)
 ```
 will return 4 points clicked on the figure (or managed with keystrokes)
-    
+
+
+```python
+ClickFig(4)
+```
+will produce an interactive mouse that highlights the figure/axes it is on,
+and allow 4 left-clicks to activate these fig/axes in matplotlib.
+
+```python
+ClickFig()
+```
+does the same, but is active forever. Deactivate it with left-click.
 
 ## Module requirements
+----------------------
 - matplotlib
 - numpy
 
 ## Python requirements
+----------------------
 Python : >= 3.6 (because of f-strings)
 
 ## Author
-Olivier Vincent, 2019-2020.
+---------
+Olivier Vincent, 2020.
