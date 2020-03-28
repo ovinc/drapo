@@ -6,7 +6,8 @@
 
 This Python 3 package contains the following classes and functions:
 
-`Cursor` is a class that creates a cursor that follows the mouse.
+`Cursor` is a class that creates a cursor that follows the mouse and can leave
+marks when clicking.
 
 Based on the Cursor class are the following functions:
 - `ginput` the same as matplotlib's ginput, but with a cursor.
@@ -14,9 +15,13 @@ Based on the Cursor class are the following functions:
 
 `Line` is a class that creates a draggable line.
 
+`Rect` is a class that creates a draggable rectangle.
+
 `ClickFig`, class that activates figures and axes by mouse hovering and clicking.
 
-The Cursor and Line classes use blitting for fast rendering.
+The Cursor and Line classes use blitting for fast rendering and are subclasses
+of `InteractiveObject` (used for development only). Rect is a subclass of Line.
+ClickFig is a class on its own for now. 
 
 See below for details and examples.
 

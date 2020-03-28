@@ -173,10 +173,9 @@ class Cursor(InteractiveObject):
         
         super().__init__(fig, color=color)    
 
-        self.cursor = None  # stores horizontal and vertical lines if active
+        self.all_artists = None  # stores horizontal and vertical lines if active
         
         self.press = False  # active when mouse is currently pressed
-        self.just_released = False  # active only right after mouse click released
         
         self.__class__.blit = blit  # blitting allows for fast rendering
         # (last instance sets the blit option for the whole class)
@@ -201,6 +200,9 @@ class Cursor(InteractiveObject):
         self.n = n  # maximum number of clicks, after which cursor is deactivated
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
+        
+        self.motionmode = None  # necessary for subclassing InteractiveObject
+        self.__class__.expecting_motion = True
 
         # below is to erase previous cursors on the figure -------------------
 
@@ -222,7 +224,8 @@ class Cursor(InteractiveObject):
 
     def __repr__(self):
 
-        base_message = f'Cursor on Fig. {self.fig.number}.'
+        name = self.__class__.name
+        base_message = f'{name} on Fig. {self.fig.number}.'
 
         if self.clickbutton == 1:
             button = "left"
@@ -273,60 +276,36 @@ class Cursor(InteractiveObject):
         ax.set_ylim(ymin, ymax)
 
         cursor = (hline, vline)
-        self.cursor = cursor
+        self.all_artists = cursor
+        self.__class__.moving_objects.append(self)
         return cursor
 
     def erase(self):
         """Erase cursor, called e.g. when the mouse exits the axes."""
-        (hline, vline) = self.cursor
+        (hline, vline) = self.all_artists
         hline.remove()
         vline.remove()
+        self.__class__.moving_objects.remove(self)
         self.fig.canvas.draw()
-        self.cursor = None
+        self.all_artists = None
         return
 
-    def update_position(self, event):
+    def update_position(self, position, mode=None):
         """Update position of the cursor to follow mouse event."""
 
-        if self.cursor is None:  # no need to update position if cursor not active
-            return
-
-        canvas = self.fig.canvas
-        hline, vline = self.cursor
+        x, y = position  
         ax = self.ax
-
-        # If the block below is incorporated in on_mouse_release only, it does not
-        # work well, because it seems to get the background data before the
-        # plot has been updated
-        if self.just_released is True:
-            if self.__class__.blit is True:
-                self.__class__.background = canvas.copy_from_bbox(self.ax.bbox)
-                self.just_released = False
-
-        if self.__class__.blit is True:
-            # without this line, the graph keeps all successive positions of
-            # the cursor on the screen
-            canvas.restore_region(self.__class__.background)
+        hline, vline = self.all_artists
 
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-
-        x = event.xdata
-        y = event.ydata
-
+      
         hline.set_xdata([xmin, xmax])
         hline.set_ydata([y, y])
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
 
-        if self.__class__.blit is True:
-            ax.draw_artist(hline)
-            ax.draw_artist(vline)
-            # without this below, the graph is not updated
-            canvas.blit(self.ax.bbox)
-        else:
-            canvas.draw()
 
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
@@ -370,16 +349,17 @@ class Cursor(InteractiveObject):
 
         self.inaxes = False
 
-        if self.cursor is not None:
+        if self.all_artists is not None:
             self.erase()
+            
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
-        if self.cursor is None:
+        if self.all_artists is None:
             return  # no active cursor --> do nothing
         if self.press is True:
             return  # to avoid weird interactions with zooming/panning
-        self.update_position(event)
+        self.update_graph(event)
 
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
@@ -390,11 +370,11 @@ class Cursor(InteractiveObject):
         """When releasing click, reactivate cursor and redraw figure.
 
         This is in order to accommodate potential zooming/panning
-        (done later in on_motion function, using the just_released parameter,
+        (done later in on_motion function, using the expecting_motion parameter,
         it does not work if done here directly, not completely sure why).
         """
         self.press = False
-        self.__class__.just_released = True
+        self.__class__.expecting_motion = True
 
         # without the line below, blitting mode keeps the cursor at time of
         # the click plotted permanently for some reason.
@@ -431,7 +411,7 @@ class Cursor(InteractiveObject):
 
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
-            if self.cursor is not None:
+            if self.all_artists is not None:
                 self.erase()
             self.disconnect()
             if self.block is True:
@@ -483,7 +463,7 @@ class Cursor(InteractiveObject):
 
 # ------------  hack to be able to see the changes directly ------------------
         if event.key in [" ", 'right', 'left', 'up', 'down']:
-            self.update_position(event)
+            self.update_graph(event)
 
 # ------------------- commands that mimic mouse events -----------------------
 
@@ -522,18 +502,18 @@ class Cursor(InteractiveObject):
 
         if self.clicknumber == self.n or event.key == 'enter':
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
-            if self.cursor is not None:
+            if self.all_artists is not None:
                 self.erase()
             self.disconnect()
             if self.block is True:
                 self.fig.canvas.stop_event_loop()
 
         if event.key in ['a', 'z', 'enter']:
-            self.just_released = True  # hack to prevent display bugs
+            self.__class__.expecting_motion = True  # hack to prevent display bugs
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""
-        if self.cursor is not None:
+        if self.all_artists is not None:
             self.erase()
         self.disconnect()
         self.fig.canvas.stop_event_loop()

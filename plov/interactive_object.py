@@ -1,11 +1,27 @@
-"""General object class, basis for Line and Rectangle"""
+"""InteractiveObject class, for plot-ov. Not for direct use, just subclassing.
 
+Classes Line and Cursor subclass InteractiveObject defined here.
+Rectangle subclasses Line, so it is a sub-subclass of InteractiveObject
+"""
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import is_color_like
 
 
 class InteractiveObject:
+    """Base class for moving objects on a figure. Used for subclassing.
+    
+    The most important method it defines is `update_graph`, which manages
+    the motion of objects on the figure. Motion is synchronized using one
+    of the moving objects as a `leader`, which needs to be defined in the
+    subclasses; only this object to calls `update_graph`. Indeed, the
+    latter method has a loop on all `moving_objects` inside of it.
+    
+    This base class also manages the connection of matplotlib figure events
+    through the connect() and disconnect() methods and associated callbacks.
+    The callbacks are empty here and those needed have to be defined in the
+    subclasses.
+    """
     
     name = 'Interactive Object'
     
@@ -56,9 +72,9 @@ class InteractiveObject:
 
     def __repr__(self):
         figs = [o.fig for o in self.__class__.all_objects]
-        ndragonfig = figs.count(self.fig)
+        n_on_fig = figs.count(self.fig)
         name = self.__class__.name
-        return f'{name} #{ndragonfig} on Fig. {self.fig.number}.'
+        return f'{name} #{n_on_fig} on Fig. {self.fig.number}.'
 
     def __str__(self):
         name = self.__class__.name
@@ -76,6 +92,7 @@ class InteractiveObject:
         y = ypt.item()
 
         return x, y
+    
     
     def update_graph(self, event):
         """Update graph with the moving artists. Called only by the leader."""
@@ -115,7 +132,7 @@ class InteractiveObject:
             canvas.draw()
 
 
-    def update_position(self, position, mode):
+    def update_position(self, position, mode=None):
         """Update object position depending on moving mode and mouse position.
         
         Here it does not do much, but the method needs to be rewritten in
@@ -142,6 +159,7 @@ class InteractiveObject:
         self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
         self.cidclose = self.fig.canvas.mpl_connect('close_event', self.on_close)
 
+   
     def disconnect(self):
         """disconnect callback ids"""    
         # mouse events
