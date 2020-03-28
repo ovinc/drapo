@@ -12,7 +12,12 @@ Based on the Cursor class are the following functions:
 from .cursor import Cursor
 from .cursor import ginput
 from .cursor import hinput
+
 from .line import Line
+
+from .rectangle import Rect
+
 from .clickfig import ClickFig
+
 
 __version__ = 1.0

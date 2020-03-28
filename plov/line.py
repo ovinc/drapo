@@ -9,7 +9,7 @@
 # TODO -- add keystroke controls (e.g. to delete the line)
 
 # TODO -- use pixel coordinates to avoid confusing motion when axes are not
-# lineat e.g. logscale.
+# linear e.g. logscale.
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,14 +24,14 @@ def main():
     fig, ax = plt.subplots()
     ax.plot([1, 0], [11, 13], '-r')
 
-    drag = Line()
+    l1 = Line()
 
     fig2, ax2 = plt.subplots()
     tt = np.linspace(0, 4, 100000)
     xx = np.exp(-tt)
     ax2.plot(tt, xx, '-b')
 
-    drag2 = Line()
+    l2 = Line()
 
     z = np.random.randn(1000)
 
@@ -42,9 +42,11 @@ def main():
     Line(ax=ax3)
     Line(ax=ax4)
 
-    Line()
+    l3 = Line()
 
     plt.show(block=False)
+    
+    return l1, l2, l3
 
 
 # ================================ line class ================================
@@ -71,11 +73,11 @@ class Line(InteractiveObject):
     - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - 'pickersize' (float, default: 5), tolerance for line picking.
-    - `color` (matplotlib's color, default: red, i.e. 'r').
+    - `color` (matplotlib's color, default: None (class default value)).
 
     Appearance of the edge points (pt1, pt2):
-    - `edgestyle` (matplotlib's marker, default: dot '.').
-    - `edgesize` (float, default: 5). Marker size.
+    - `ptstyle` (matplotlib's marker, default: dot '.').
+    - `ptsize` (float, default: 5). Marker size.
 
     Appearance of the connecting line (link):
     - `linestyle` (matplotlib's linestyle, default: continous '-').
@@ -112,71 +114,47 @@ class Line(InteractiveObject):
     - If two lines coincide completely (within pickersize), it is however not
     possible to separate them again. Best is to consider them as a single line
     and instanciate another line.
+    
+    - The last Line instance dictates the blitting behavior for all existing
+    lines (blit=True or blit=False).
     """
     
     name = 'Draggable Line'
-
-    all_objects = set()  # all instances of lines
-    moving_lines = []  # list of lines curently selected for moving
-    background = None  # background save for blitting
-    expecting_motion = False  # True when the leading line had been selected
-
-    # (leading line is the one that triggers motion of the other selected lines
-    # in the case where there are several lines moving at the same time. This
-    # feature is for synchronizing issues in blitting mode.
+    
 
     def __init__(self, pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
-                 pickersize=5, color='k',
-                 edgestyle='.', edgesize=5,
+                 pickersize=5, color=None,
+                 ptstyle='.', ptsize=5,
                  linestyle='-', linewidth=1,
                  avoid_existing = True
                  ):
         
-        super().__init__(fig, ax)    
+        super().__init__(fig, ax, color)    
 
-        self.blit = blit
-        self.leader = False
+        options = (pos, pickersize, self.color, ptstyle, ptsize, 
+                   linestyle, linewidth, avoid_existing)
+        # create line, and attributes pt1, pt2, link, all
+        self.create(options)
 
-        # set position of line on screen so that it does not overlap others
-        x1, y1, x2, y2 = Line.set_position(self, pos, pickersize, avoid_existing)
-
-        # create edge points -------------------------------------------------
-
-        pt1, = self.ax.plot(x1, y1, marker=edgestyle, color=color,
-                            markersize=edgesize, picker=edgesize)
-        pt2, = self.ax.plot(x2, y2, marker=edgestyle, color=color,
-                            markersize=edgesize, picker=edgesize)
-
-        self.pt1 = pt1              # first point
-        self.pt2 = pt2              # second point
-
-        # create connecting line (link) ---------------------------------------
-
-        x1, y1 = Line.get_pt_position(self.pt1)
-        x2, y2 = Line.get_pt_position(self.pt2)
-
-        self.link, = self.ax.plot([x1, x2], [y1, y2], picker=pickersize,
-                                  linestyle='-', linewidth=linewidth, color=color)
-
-        # assemble lines and pts into "all" ----------------------------------
-        self.all = (self.pt1, self.pt2, self.link)
+        # the last object to be instanciated dictates if blitting is true or not
+        self.__class__.blit = blit
 
         # indicates if object moves as a whole ('line') or with just one edge
         # moving ('point'); is None when object not moving
         self.motionmode = None
         # active (moving) points: stores pt1 or pt2 in 'point' mode, stores
         # 'all' in 'line' mode, stores None when not moving
-        self.active = None
-        self.inactive = 'all'  # inactive points
+        self.active_pt = None
+        self.inactive_pt = 'all'  # inactive points
         # (pt2 or pt1 in 'point' mode, None  in 'line', 'all' when not moving)
-        self.press = None  # stores useful buttonpress info
+        self.press_info = None  # stores useful buttonpress info
 
-        # set that stores info about what artists of the line are picked
-        self.selected = set()
+        # set that stores info about what artists are picked
+        self.picked_artists = set()
 
         self.connect()  # connect to fig events
 
-        # self.fig.canvas.draw()
+        # to prevent any shift in axes limits when instanciating lins
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
 
@@ -184,6 +162,39 @@ class Line(InteractiveObject):
 
 # ============================ main line methods =============================
 
+
+    def create(self, options):
+        """Creates the line and its components (pt1, pt2, link)"""
+        
+        (pos, pickersize, color, ptstyle, ptsize, 
+         linestyle, linewidth, avoid_existing) = options
+        
+        # set position of line on screen so that it does not overlap others
+        x1, y1, x2, y2 = self.__class__.set_position(self, pos, pickersize, avoid_existing)
+
+        # create edge points -------------------------------------------------
+
+        pt1, = self.ax.plot(x1, y1, marker=ptstyle, color=color,
+                            markersize=ptsize, picker=ptsize)
+        pt2, = self.ax.plot(x2, y2, marker=ptstyle, color=color,
+                            markersize=ptsize, picker=ptsize)
+
+        self.pt1 = pt1              # first point
+        self.pt2 = pt2              # second point
+
+        # create connecting line (link) ---------------------------------------
+
+
+        x1, y1 = self.__class__.get_pt_position(pt1)
+        x2, y2 = self.__class__.get_pt_position(pt2)
+
+        self.link, = self.ax.plot([x1, x2], [y1, y2], picker=pickersize,
+                                  c=color,
+                                  linestyle=linestyle, linewidth=linewidth)
+
+        # assemble lines and pts into "all" ----------------------------------
+        self.all_artists = (self.pt1, self.pt2, self.link)
+        
 
     def set_position(self, position, pickersize, avoid=True):
         """Set position of new line, avoiding existing lines if necessary."""
@@ -218,8 +229,8 @@ class Line(InteractiveObject):
             # if on same axis, record coords in a list to check overlap later
             if line.ax is ax:
 
-                x1b, y1b = Line.get_pt_position(line.pt1)
-                x2b, y2b = Line.get_pt_position(line.pt2)
+                x1b, y1b = self.__class__.get_pt_position(line.pt1)
+                x2b, y2b = self.__class__.get_pt_position(line.pt2)
                 [X1b, Y1b] = postopx.transform((x1b, y1b))
                 [X2b, Y2b] = postopx.transform((x2b, y2b))
                 dragonax.append((X1b, Y1b))
@@ -251,6 +262,8 @@ class Line(InteractiveObject):
                 break
 
         else:
+            # This situation actually never happens because instanciation
+            # automatically pushes draglines further away, to infinity
             print('Warning: Could not find suitable position for new DragLine')
 
         [x1, y1] = pxtopos.transform((X1, Y1))  # back to data coordinates
@@ -258,87 +271,49 @@ class Line(InteractiveObject):
 
         return x1, y1, x2, y2
 
-    @staticmethod
-    def get_pt_position(pt):
-        "Gets point position as a tuple, from line data"
-        xpt = pt.get_xdata()
-        ypt = pt.get_ydata()
-
-        x = xpt.item()  # convert numpy array to scalar
-        y = ypt.item()
-
-        return x, y
 
     def inactive_select(self):
         """returns inactive artists in the line given the active ones"""
-        if self.active == None: return 'all'
-        if self.active == 'all': return None
-        if self.active == self.pt1: return self.pt2
-        if self.active == self.pt2: return self.pt1
+        if self.active_pt == None: return 'all'
+        if self.active_pt == 'all': return None
+        if self.active_pt == self.pt1: return self.pt2
+        if self.active_pt == self.pt2: return self.pt1
+    
 
-    def update_position(self, event):
-        """update position of moving artists to follow the mouse"""
-        x = event.xdata
-        y = event.ydata
+    def update_position(self, position, mode):
+        """Update object position depending on moving mode and mouse position."""
+        
+        x, y = position
+        
+        # move just one point, the other one stays fixed
+        if mode == 'point':
 
-        canvas = self.fig.canvas
-        ax = self.ax
+            x_inact, y_inact = self.inactpos
 
-        if self.blit is True and Line.expecting_motion is True:
-            canvas.draw()
-            Line.background = canvas.copy_from_bbox(self.ax.bbox)
-            Line.expecting_motion = False
+            self.active_pt.set_xdata(x)  # update position of active point
+            self.active_pt.set_ydata(y)
 
-        if self.blit is True:
-            # without this line, the graph keeps all successive positions of
-            # the cursor on the screen
-            canvas.restore_region(self.background)
+            self.link.set_xdata([x, x_inact])  # update position of line
+            self.link.set_ydata([y, y_inact])
 
-        # now the leader triggers update of all moving artists including itself
-        for line in Line.moving_lines:
+        # move the line as a whole in a parallel fashion
+        elif mode == 'line':
 
-            # move just one point, the other one stays fixed
-            if line.motionmode == 'point':
+            # get where click was initially made
+            x1, y1, x2, y2, xpress, ypress = self.press_info
 
-                x_inact, y_inact = line.inactpos
+            dx = x - xpress             # calculate motion
+            dy = y - ypress
 
-                line.active.set_xdata(x)  # update position of active point
-                line.active.set_ydata(y)
+            self.pt1.set_xdata(x1+dx)
+            self.pt1.set_ydata(y1+dy)
 
-                line.link.set_xdata([x, x_inact])  # update position of line
-                line.link.set_ydata([y, y_inact])
+            self.pt2.set_xdata(x2+dx)
+            self.pt2.set_ydata(y2+dy)
 
-            # move the line as a whole in a parallel fashion
-            elif line.motionmode == 'line':
-
-                # get where click was initially made
-                x1, y1, x2, y2, xpress, ypress = line.press
-
-                dx = x - xpress             # calculate motion
-                dy = y - ypress
-
-                line.pt1.set_xdata(x1+dx)
-                line.pt1.set_ydata(y1+dy)
-
-                line.pt2.set_xdata(x2+dx)
-                line.pt2.set_ydata(y2+dy)
-
-                line.link.set_xdata([x1+dx, x2+dx])
-                line.link.set_ydata([y1+dy, y2+dy])
-
-            # Draw all artists of the line (if not, some can miss in motion)
-            if self.blit is True:
-                ax.draw_artist(line.pt1)
-                ax.draw_artist(line.pt2)
-                ax.draw_artist(line.link)
-
-        # without this below, the graph is not updated
-        if self.blit is True:
-            canvas.blit(ax.bbox)
-        else:
-            canvas.draw()
-
-        return
+            self.link.set_xdata([x1+dx, x2+dx])
+            self.link.set_ydata([y1+dy, y2+dy])
+            
 
     def erase(self):
 
@@ -348,7 +323,7 @@ class Line(InteractiveObject):
 
         self.disconnect()  # useful ?
 
-        Line.all_objects.remove(self)
+        self.__class__.all_objects.remove(self)
 
         del self
 
@@ -366,20 +341,20 @@ class Line(InteractiveObject):
             self.fig.canvas.draw()
             return
 
-        if selected in self.all:
-            self.selected.add(selected)
+        if selected in self.all_artists:
+            self.picked_artists.add(selected)  # this stores the artists, not the line_objects
 
     def on_mouse_press(self, event):
         """once the selected points are known, on_mouse_press manages how to
         define active and inactive elements
         """
-        if len(self.selected) == 0:
+        if len(self.picked_artists) == 0:
             return
         # if any component of the line is selected, it means the line is moving
         else:
-            Line.moving_lines.append(self)
-            if self.blit is True:
-                for artist in self.all:
+            self.__class__.moving_objects.append(self)
+            if self.__class__.blit is True:
+                for artist in self.all_artists:
                     artist.set_animated(True)
 
         # if several moving lines, save background (for blitting) only once.
@@ -387,38 +362,38 @@ class Line(InteractiveObject):
         # it is the one that detects mouse moving and triggers re-drawing of
         # all other moving lines.
         # Note : all moving lines are necesary on the same axes
-        if len(Line.moving_lines) == 1:
-            self.leader = True
+        if len(self.__class__.moving_objects) == 1:
+            self.__class__.leader = self
             # Below is to delay background setting for blitting until all
             # artists have been defined as animated.
             # This is because the canvas.draw() and/or canvas_copy_from_bbox()
             # calls need to be made with all moving artists declared as animated
-            Line.expecting_motion = True
+            self.__class__.expecting_motion = True
             self.fig.canvas.draw()
 
-        if len(self.selected) == 2:  # in this case, one edge has been selected
+        if len(self.picked_artists) == 2:  # in this case, one edge has been selected
 
-            self.selected.remove(self.link)  # remove link to have only the pt
+            self.picked_artists.remove(self.link)  # remove link to have only the pt
             # extract the point, which should be the last element in the set
-            selected = self.selected.pop()
+            selected = self.picked_artists.pop()
 
-            # WARNING: at this stage, self.selected should now be an empty set
+            # WARNING: at this stage, self.picked_artists should now be an empty set
 
-            self.active = selected  # selected point becomes active
-            self.inactive = self.inactive_select()  # the other one is inactive
-            self.inactpos = Line.get_pt_position(self.inactive)
+            self.active_pt = selected  # selected point becomes active
+            self.inactive_pt = self.inactive_select()  # the other one is inactive
+            self.inactpos = self.__class__.get_pt_position(self.inactive_pt)
 
             self.motionmode = 'point'
 
         # in this case, the "link" has been picked --> line moved as a whole.
-        if len(self.selected) == 1:
+        if len(self.picked_artists) == 1:
 
-            x1, y1 = Line.get_pt_position(self.pt1)
-            x2, y2 = Line.get_pt_position(self.pt2)
+            x1, y1 = self.get_pt_position(self.pt1)
+            x2, y2 = self.get_pt_position(self.pt2)
 
             # store location of pts and of click
-            self.press = x1, y1, x2, y2, event.xdata, event.ydata
-            self.active = 'all'
+            self.press_info = x1, y1, x2, y2, event.xdata, event.ydata
+            self.active_pt = 'all'
 
             self.motionmode = 'line'
 
@@ -426,32 +401,32 @@ class Line(InteractiveObject):
 
         if self.motionmode==None: return
 
-        # only the leader triggers moving events (others drawn in update_position)
-        if self.leader is True:
-            self.update_position(event)
+        # only the leader triggers moving events (others drawn in update_graph)
+        if self.__class__.leader is self:
+            self.update_graph(event)
 
     def on_mouse_release(self, event):
         """If mouse released, reset all variables related to line moving"""
         
-        if self.active is None:
+        if self not in self.__class__.moving_objects:
             return
         else:
-            if self.blit is True:
-                for artist in self.all:
+            if self.__class__.blit is True:
+                for artist in self.all_artists:
                     artist.set_animated(False)
                     
         self.fig.canvas.draw()
 
         self.motionmode = None
-        self.active = None
-        self.inactive = 'all'
-        self.press = None
-        self.selected = set()  # empty set
+        self.active_pt = None
+        self.inactive_pt = 'all'
+        self.press_info = None
+        self.picked_artists = set()  # empty set
 
         # Reset class variable that store moving information
-        Line.moving_lines = []
-        Line.expecting_motion = False
-        Line.background = None
+        self.__class__.moving_objects = []
+        self.__class__.expecting_motion = False
+        self.__class__.background = None
 
     def on_leave_axes(self, event):
         """If mouse leaves axes it is considered the same as unclicking"""
@@ -459,10 +434,9 @@ class Line(InteractiveObject):
 
     def on_close(self, event):
         "if figure is closed, remove line from the list of lines"
-        if self in Line.all_objects:
-            Line.all_objects.remove(self)
+        if self in self.__class__.all_objects:
+            self.__class__.all_objects.remove(self)
         self.disconnect()
-
 
 
 

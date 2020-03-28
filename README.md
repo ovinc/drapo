@@ -52,7 +52,7 @@ Interactive draggable line on matplotlib figure/axes.
 ```python
 Line(pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
                  pickersize=5, color='k',
-                 edgestyle='.', edgesize=5,
+                 ptstyle='.', ptsize=5,
                  linestyle='-', linewidth=1)
 ```
 
@@ -78,8 +78,8 @@ without any other specification.
 - `color` (matplotlib's color, default: red, i.e. 'r').
 
 Appearance of the edge points (pt1, pt2):
-- `edgestyle` (matplotlib's marker, default: dot '.').
-- `edgesize` (float, default: 5). Marker size.
+- `ptstyle` (matplotlib's marker, default: dot '.').
+- `ptsize` (float, default: 5). Marker size.
 
 Appearance of the connecting line (link):
 - `linestyle` (matplotlib's linestyle, default: continous '-').
@@ -115,6 +115,9 @@ drag it awway.
 possible to separate them again. Best is to consider them as a single line
 and instanciate another line.
 
+- The last Line instance dictates the blitting behavior for all existing
+lines (blit=True or blit=False).
+
 
 ## Cursor class
 ---------------
@@ -135,24 +138,25 @@ is not bound to specific axes: moving the mouse over different axes will
 plot the cursor in these other axes. Right now, the cursor is bound to a
 certain figure, however this could be changed easily.
 
-Cursor style can be modified with the options `color`, `style` and `width`,
-which correspond to matplotlib's color, linestyle and linewidth respectively.
-By default, color is red, style is dotted (:), width is 1.
+Cursor style can be modified with the options `color`, `linestyle` and 
+`linewidth`, which correspond to matplotlib's parameters of the same name.
+By default, color is red, linestyle is dotted (:), linewidth is 1.
 
 Cursor apparance can also be changed by specific key strokes:
-- space bar to toggle visibility (on/off)
-- up/down arrows: increase or decrease width (linewidth)
-- left/right arrows: cycle through different cursor colors.
+    - space bar to toggle visibility (on/off)
+    - up/down arrows: increase or decrease width (linewidth)
+    - left/right arrows: cycle through different cursor colors
 
-The cursor can also leave marks and/or record click positions if there is 
+The cursor can also leave marks and/or record click positions if there is
 a click with a specific button (by default, left mouse button). Clicks can
 be removed with the remove button (by default, right mouse button), and
 stopped with the stop button (by default, middle mouse button).
 
 Addition / removal / stop of clicks are also achieved by key strokes:
-- `a` for addition (corresponds to left click)
-- `z` for removal (corresponds to right click)
-- `enter` for stopping clicks (corresponds to middle click).
+    - 'a' for addition (corresponds to left click)
+    - 'z' for removal (corresponds to right click)
+    - 'enter' for stopping clicks (corresponds to middle click)
+
     
 ### Parameters
 
@@ -160,9 +164,9 @@ All parameters optional so that a cursor can just be created by `Cursor()`
 without any other specification.
 
 - `fig` (matplotlib figure, default: current figure, specified as None).
-- `color` (matplotlib's color, default: red, i.e. 'r').
-- `style` (matplotlib's linestyle, default: dotted ':').
-- `width` (float, default: 1.0). Line width.
+- `color` (matplotlib's color, default: None, i.e. class default value).
+- `linestyle` (matplotlib's linestyle, default: dotted ':').
+- `linewidth` (float, default: 1.0). Line width.
 - `blit` (bool, default: True). Blitting for performance.
 - `show_clicks` (bool, default:False). Mark location of clicks.
 - `record_clicks` (bool, default False). Create a list of click positions.
@@ -179,7 +183,7 @@ The 3 following parameters are useful for ginput-like functions.
 
 The last 2 parameters customize appearance of click marks when shown.
 - `mark_symbol` (matplolib's symbol, default: '+')
-- `mark_size` (matplotlib's markersize, default 10)
+- `mark_size` (matplotlib's markersize, default: 10)
 
 
 ### Useful class methods
@@ -300,7 +304,7 @@ from plov import Line, Cursor, ClickFig, ginput, hinput
 for the initial import.
 
 ```python
-Line(color='r', edgestyle='+', edgesize=10, linestyle=':', linewidth=2):
+Line(color='r', ptstyle='+', ptsize=10, linestyle=':', linewidth=2):
 ```
 creates a thick red, dotted draggable line, with edges drawn as large crosses.
 

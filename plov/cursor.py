@@ -70,9 +70,9 @@ class Cursor(InteractiveObject):
     plot the cursor in these other axes. Right now, the cursor is bound to a
     certain figure, however this could be changed easily.
 
-    Cursor style can be modified with the options `color`, `style` and `width`,
-    which correspond to matplotlib's color, linestyle and linewidth respectively.
-    By default, color is red, style is dotted (:), width is 1.
+    Cursor style can be modified with the options `color`, `linestyle` and 
+    `linewidth`, which correspond to matplotlib's parameters of the same name.
+    By default, color is red, linestyle is dotted (:), linewidth is 1.
 
     Cursor apparance can also be changed by specific key strokes:
         - space bar to toggle visibility (on/off)
@@ -95,8 +95,8 @@ class Cursor(InteractiveObject):
 
     - `fig` (matplotlib figure, default: current figure, specified as None).
     - `color` (matplotlib's color, default: red, i.e. 'r').
-    - `style` (matplotlib's linestyle, default: dotted ':').
-    - `width` (float, default: 1.0). Line width.
+    - `linestyle` (matplotlib's linestyle, default: dotted ':').
+    - `linewidth` (float, default: 1.0). Line width.
     - `blit` (bool, default: True). Blitting for performance.
     - `show_clicks` (bool, default:False). Mark location of clicks.
     - `record_clicks` (bool, default False). Create a list of click positions.
@@ -163,36 +163,26 @@ class Cursor(InteractiveObject):
     
     name = 'Cursor'
 
-    # Define colors the arrows will cycle through
-    # (in addition to the one specified by the user)
-    colors = ['r', 'b', 'k', 'w']
 
-    # list of Cursor instances
-    all_objects = set()
-
-    def __init__(self, fig=None, color='r', style=':', width=1, blit=True,
-                 show_clicks=False, record_clicks=False,
+    def __init__(self, fig=None, color='r', linestyle=':', linewidth=1, 
+                 blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
         
-        super().__init__(fig)    
+        super().__init__(fig, color=color)    
 
         self.cursor = None  # stores horizontal and vertical lines if active
-        self.background = None  # this is for blitting
+        
         self.press = False  # active when mouse is currently pressed
         self.just_released = False  # active only right after mouse click released
-        self.blit = blit  # blitting allows for fast rendering
+        
+        self.__class__.blit = blit  # blitting allows for fast rendering
+        # (last instance sets the blit option for the whole class)
 
-        self.color = color
-        if color not in Cursor.colors:
-            Cursor.colors.append(color)
-        # finds at which position the color is in the list
-        self.colorindex = Cursor.colors.index(color)
-
-        self.style = style
-        self.width = width
+        self.style = linestyle
+        self.width = linewidth
 
         self.visibility = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
         self.inaxes = False  # True when mouse is in axes
@@ -215,11 +205,11 @@ class Cursor(InteractiveObject):
         # below is to erase previous cursors on the figure -------------------
 
         # list all cursors on the same figure
-        fig_cursors = [c for c in self.all_objects if c.fig == self.fig 
+        fig_cursors = [c for c in self.__class__.all_objects if c.fig == self.fig 
                        and c is not self]
 
         for cursor in fig_cursors:
-            self.all_objects.remove(cursor)
+            self.__class__.all_objects.remove(cursor)
             cursor.disconnect()
             del cursor
 
@@ -272,11 +262,11 @@ class Cursor(InteractiveObject):
 
         # horizontal and vertical cursor lines, the animated option is for blitting
         hline, = ax.plot([xmin, xmax], [y, y], color=self.color,
-                         linewidth=self. width, linestyle=self.style,
-                         animated=self.blit)
+                         linewidth=self.width, linestyle=self.style,
+                         animated=self.__class__.blit)
         vline, = ax.plot([x, x], [ymin, ymax], color=self.color,
                          linewidth=self.width, linestyle=self.style,
-                         animated=self.blit)
+                         animated=self.__class__.blit)
 
         # because plotting the lines changes the initial xlim, ylim
         ax.set_xlim(xmin, xmax)
@@ -309,14 +299,14 @@ class Cursor(InteractiveObject):
         # work well, because it seems to get the background data before the
         # plot has been updated
         if self.just_released is True:
-            if self.blit is True:
-                self.background = canvas.copy_from_bbox(self.ax.bbox)
+            if self.__class__.blit is True:
+                self.__class__.background = canvas.copy_from_bbox(self.ax.bbox)
                 self.just_released = False
 
-        if self.blit is True:
+        if self.__class__.blit is True:
             # without this line, the graph keeps all successive positions of
             # the cursor on the screen
-            canvas.restore_region(self.background)
+            canvas.restore_region(self.__class__.background)
 
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = ax.get_xlim()
@@ -330,7 +320,7 @@ class Cursor(InteractiveObject):
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
 
-        if self.blit is True:
+        if self.__class__.blit is True:
             ax.draw_artist(hline)
             ax.draw_artist(vline)
             # without this below, the graph is not updated
@@ -372,8 +362,8 @@ class Cursor(InteractiveObject):
         canvas = self.fig.canvas
         canvas.draw()
 
-        if self.blit is True:
-            self.background = canvas.copy_from_bbox(self.ax.bbox)
+        if self.__class__.blit is True:
+            self.__class__.background = canvas.copy_from_bbox(self.ax.bbox)
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
@@ -404,7 +394,7 @@ class Cursor(InteractiveObject):
         it does not work if done here directly, not completely sure why).
         """
         self.press = False
-        self.just_released = True
+        self.__class__.just_released = True
 
         # without the line below, blitting mode keeps the cursor at time of
         # the click plotted permanently for some reason.
@@ -478,12 +468,14 @@ class Cursor(InteractiveObject):
             self.width = self.width-0.5 if self.width > 0.5 else 0.5
 
         if event.key in ['left', 'right']:
+            # finds at which position the current color is in the list
+            colorindex = self.__class__.colors.index(self.color)
             if event.key == "left":
-                self.colorindex -= 1
+                colorindex -= 1
             else:
-                self.colorindex += 1
-            self.colorindex = self.colorindex % len(Cursor.colors)
-            self.color = Cursor.colors[self.colorindex]
+                colorindex += 1
+            colorindex = colorindex % len(self.__class__.colors)
+            self.color = self.__class__.colors[colorindex]
 
         if event.key in ['right', 'left', 'up', 'down']:
             self.erase()  # easy way to not have to update artist
@@ -545,7 +537,6 @@ class Cursor(InteractiveObject):
             self.erase()
         self.disconnect()
         self.fig.canvas.stop_event_loop()
-
 
 
 
