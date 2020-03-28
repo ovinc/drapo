@@ -1,7 +1,7 @@
 """ Extensions to Matplotlib: Cursor class, and ginput function.
 
 This module contains a Cursor class (cursor that moves with the mouse) and
-a ginput function identical to the matplotlib ginput, but with a cursor.
+ginput/hinput functions similar to the matplotlib ginput, but with a cursor.
 """
 
 # TODO - To allow cursor to appear on multiple figures, it is necessary to
@@ -16,7 +16,6 @@ a ginput function identical to the matplotlib ginput, but with a cursor.
 
 
 import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
 import time
 
@@ -138,6 +137,10 @@ class Cursor:
     Notes
     -----
 
+    - By default, the cursor is created on the active figure/axes. 
+    To instanciate a cursor in other figure/axes, either specify the key/ax
+    parameters, or use `ClickFig()` to activate these axes.
+    
     - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
     have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
     last one is the same as matplotlib's ginput, to avoid interactions with
@@ -581,6 +584,8 @@ class Cursor:
 
 def ginput(*args, **kwargs):
     """Identical to matplotlib's ginput, with added cursor for easier clicking.
+
+    Use of hinput is preferred, because it allows for zooming/panning.
 
     Key shortcuts and mouse clicks follow matplotlib's behavior. The Cursor
     class only acts on the cursor here (appearance, with key Cursor class

@@ -1,7 +1,10 @@
 # Plot-OV (plov) - Additional interactive Matplotlib features
 
+
 ## General information
 ----------------------
+
+This Python 3 package contains the following classes and functions:
 
 `Cursor` is a class that creates a cursor that follows the mouse.
 
@@ -10,6 +13,36 @@ Based on the Cursor class are the following functions:
 - `hinput` is ginput (with cursor) but also with zooming/panning abilities.
 
 `Line` is a class that creates a draggable line.
+
+`ClickFig`, class that activates figures and axes by mouse hovering and clicking.
+
+The Cursor and Line classes use blitting for fast rendering.
+
+See below for details and examples.
+
+
+## Install
+----------
+
+For now the package is not listed in PyPI, so one needs to do a manual install.
+Follow the steps below:
+
+- Clone the project or download directly the files into a folder.
+
+- In the command line, `cd` into the project or folder, you should see a file
+  named __setup.py__.
+  
+- run `python -m pip install .`
+
+Now, the package can be imported in Python with `import plov`.
+
+**Note**: replace `python` by the command or alias corresponding to the Python
+installation you would like to install the package with.
+
+**Note**: if you wish to keep the package files in the folder where the files
+were downloaded and/or edit the files with direct effect in Python, run the
+following install command instead: `python -m pip install . -e`.
+
 
 ## Line class
 -------------
@@ -28,13 +61,15 @@ and the line between them (link), with customizable appearance.
 
 Dragging the line can be done in two different ways:
 - clicking on one edge: then the other edge is fixed during motion
-- clicking on the line itself: then the line moves as a whole
-
+- clicking on the line itself: then the line moves as a whole (do not use this
+  mode if the figure/axes have nonlinear scale, e.g. log)
+  
 Right-clicking removes and deletes the line.
 
 ### Parameters
 
-All parameters optional so that a line can simply be created by `Line()`.
+All parameters optional so that a line can simply be created by `Line()`
+without any other specification.
 
 - `pos` (4-tuple, default: (.2, .2, .8, .8)). Initial position in axes.
 - `fig` (matplotlib figure, default: current figure, specified as None).
@@ -52,17 +87,30 @@ Appearance of the connecting line (link):
 
 ### Notes
 
+- By default, the line is created on the active figure/axes. 
+To instanciate a line in other figure/axes, either specify the key/ax
+parameters, or use `ClickFig()` to activate these axes.
+
+- If the figure uses non-linear axes (e.g. log), dragging the line as a 
+whole can generate confusing motion. It is better to use edge dragging 
+only in this situation. This "bug" could be fixed by tracking pixel 
+motion of the line instead of axes coordinates.
+
 - For now, control over a line is lost when the mouse exits the axes. If
 this happens, just bring the mouse back in the axes and click on the line.
+
 - When instanciating a line, there is a check to see if any of the edges
 overlap with an edge of an existing line. If it's the case, the line is
 shited (up and left) to avoid overlapping.
+
 - If edges of different lines overlap at some point, it is easy to
 separate them by clicking on one of the lines, away from the edges, to
 drag it awway.
+
 - If two lines coincide completely (within pickersize), it is however not
 possible to separate them again. Best is to consider them as a single line
 and instanciate another line.
+
 
 ## Cursor class
 ---------------
@@ -104,7 +152,8 @@ Addition / removal / stop of clicks are also achieved by key strokes:
     
 ### Parameters
 
-All parameters optional so that a cursor can be created by `Cursor()`.
+All parameters optional so that a cursor can just be created by `Cursor()`
+without any other specification.
 
 - `fig` (matplotlib figure, default: current figure, specified as None).
 - `color` (matplotlib's color, default: red, i.e. 'r').
@@ -149,23 +198,31 @@ are not meant for the user.
     
 ### Notes
 
+- By default, the cursor is created on the active figure/axes. 
+To instanciate a cursor in other figure/axes, either specify the key/ax
+parameters, or use `ClickFig()` to activate these axes.
+
 - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
 have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
 last one is the same as matplotlib's ginput, to avoid interactions with
 other matplotlib's interactive features (e.g. backspace for "back").
+
 - Currently, the mark color is always the same as the cursor.
+
 - It is not allowed to have more than 1 cursor per figure, to avoid 
 conflics between cursors in blitting mode.
+
 - Using panning and zooming works with the cursor on; to enable this,
 blitting is temporarily suspended during a click+drag event.
+
 - As a result, the cursor does not reappear immediately after panning or
 zooming if blitting is activated, but one needs to move the mouse.
-
 
 ## ginput function
 ------------------
 
 Identical to matplotlib's ginput, with added cursor for easier clicking.
+Use of hinput is preferred, because it allows for zooming/panning (see below).
 
 ```python
 data = ginput(*args, **kwargs)
@@ -227,11 +284,16 @@ Parameters
 ----------
 - n (int, default -1, i.e. forever): maximum number of clicks allowed.
 - highlight (bool, default True): change ax/fig color when mouse on them.
-"""
 
 
 
 ## Examples
+-----------
+
+```python
+from plov import Line, Cursor, ClickFig, ginput, hinput
+```
+for the initial import.
 
 ```python
 Line(color='r', edgestyle='+', edgesize=10, linestyle=':', linewidth=2):
@@ -243,6 +305,7 @@ C = Cursor(record_clicks=True, show_clicks=True, nclicks=5)
 ```
 creates a cursor that leaves a red cross at the points clicked and saves the
 corresponding position (x, y) data in a list, accessible with `C.clickdata`.
+For recording click positions, it is better to use the `hinput` function.
 The cursor is deactivated after 5 clicks, but the marks stay on the figure.
 To remove the marks, use the `erase_marks()` method.
 
@@ -254,10 +317,10 @@ because of the blit=False option. The cursor can be thickened by using the
 up arrow and changed color by using the left/right arrows.
 
 ```python
-hinput(4)
+data = hinput(4)
 ```
-will return 4 points clicked on the figure (or managed with keystrokes)
-
+will return a tuple of 4 points clicked on the figure
+(or managed with keystrokes).
 
 ```python
 ClickFig(4)
@@ -268,12 +331,25 @@ and allow 4 left-clicks to activate these fig/axes in matplotlib.
 ```python
 ClickFig()
 ```
-does the same, but is active forever. Deactivate it with left-click.
+does the same, but is active forever. Deactivate it with right-click.
+
+**Note**: to see direct use cases and instanciation of cursor and lines, 
+it is also possible to run the following in a python shell:
+```python
+import plov
+plov.line.main()
+```
+and/or
+```python
+import plov
+plov.cursor.main()
+```
+
 
 ## Module requirements
 ----------------------
 - matplotlib
-- numpy
+- numpy (only needed to run the examples present in the main() functions)
 
 ## Python requirements
 ----------------------

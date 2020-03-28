@@ -1,6 +1,5 @@
 """Extensions to Matplotlib: Line class (draggable line)"""
 
-# TODO: -- select subplot to draw in with a click
 # TODO: -- interactive initiation of line position (with ginput or equivalent)
 # TODO: -- add double click to "freeze" line to avoid moving it by mistake later?
 
@@ -8,6 +7,9 @@
 # (probably, need to use figure coordinate transforms)
 
 # TODO -- add keystroke controls (e.g. to delete the line)
+
+# TODO -- use pixel coordinates to avoid confusing motion when axes are not
+# lineat e.g. logscale.
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,6 +60,7 @@ class Line:
 
     Right-clicking removes and deletes the line.
 
+
     Parameters
     ----------
     All parameters optional so that a line can simply be created by `Line()`.
@@ -75,9 +78,19 @@ class Line:
     Appearance of the connecting line (link):
     - `linestyle` (matplotlib's linestyle, default: continous '-').
     - `linewidth` (float, default: 1). Line width.
+    
 
     Notes
     -----
+    
+    - By default, the line is created on the active figure/axes. 
+    To instanciate a line in other figure/axes, either specify the key/ax
+    parameters, or use `ClickFig()` to activate these axes.
+    
+    - If the figure uses non-linear axes (e.g. log), dragging the line as a 
+    whole can generate confusing motion. It is better to use edge dragging 
+    only in this situation. This "bug" could be fixed by tracking pixel 
+    motion of the line instead of axes coordinates.
 
     - For now, control over a line is lost when the mouse exits the axes. If
     this happens, just bring the mouse back in the axes and click on the line.

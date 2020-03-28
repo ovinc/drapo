@@ -2,8 +2,6 @@
 
 # TODO -- add on_close where it disconnects only the closed figure ?
 # TODO -- similarly, disconnect when the last figure is closed ? I don't know if this is useful
-# TODO -- find better name for ClickFig
-# TODO -- Track all instances and do not allow more than one at a time?
 # TODO -- use key shortcuts to validate / cancel
 # TODO -- add function that returns the selected ax/fig (probably needs block)
 
