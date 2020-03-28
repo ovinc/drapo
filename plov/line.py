@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math as m
 
+from .interactive_object import InteractiveObject
+
 # ================================= example ==================================
 
 def main():
@@ -48,7 +50,7 @@ def main():
 # ================================ line class ================================
 
 
-class Line:
+class Line(InteractiveObject):
     """Interactive draggable line on matplotlib figure/axes.
 
     The line is composed of three elements : two points at the edge (pt1, pt2)
@@ -111,8 +113,10 @@ class Line:
     possible to separate them again. Best is to consider them as a single line
     and instanciate another line.
     """
+    
+    name = 'Draggable Line'
 
-    all_lines = []  # list of all instances of lines
+    all_objects = set()  # all instances of lines
     moving_lines = []  # list of lines curently selected for moving
     background = None  # background save for blitting
     expecting_motion = False  # True when the leading line had been selected
@@ -127,16 +131,11 @@ class Line:
                  linestyle='-', linewidth=1,
                  avoid_existing = True
                  ):
-
-        self.fig = plt.gcf() if fig is None else fig
-        self.ax = plt.gca() if ax is None else ax
+        
+        super().__init__(fig, ax)    
 
         self.blit = blit
         self.leader = False
-
-        # This is because adding lines can re-dimension axes limits
-        self.xlim = self.ax.get_xlim()
-        self.ylim = self.ax.get_ylim()
 
         # set position of line on screen so that it does not overlap others
         x1, y1, x2, y2 = Line.set_position(self, pos, pickersize, avoid_existing)
@@ -156,10 +155,8 @@ class Line:
         x1, y1 = Line.get_pt_position(self.pt1)
         x2, y2 = Line.get_pt_position(self.pt2)
 
-        ax = self.ax
-
-        self.link, = ax.plot([x1, x2], [y1, y2], picker=pickersize,
-                             linestyle='-', linewidth=linewidth, color=color)
+        self.link, = self.ax.plot([x1, x2], [y1, y2], picker=pickersize,
+                                  linestyle='-', linewidth=linewidth, color=color)
 
         # assemble lines and pts into "all" ----------------------------------
         self.all = (self.pt1, self.pt2, self.link)
@@ -179,23 +176,10 @@ class Line:
 
         self.connect()  # connect to fig events
 
-        Line.all_lines.append(self)
-
         # self.fig.canvas.draw()
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
 
-        # this seems to be a generic way to bring window to the front but I
-        # have not checked with all backends etc, and it does not always work
-        plt.get_current_fig_manager().show()
-
-    def __repr__(self):
-        drag_figs = [drag.fig for drag in Line.all_lines]
-        ndragonfig = drag_figs.count(self.fig)
-        return f'Draggable Line #{ndragonfig} on Fig. {self.fig.number} \n'
-
-    def __str__(self):
-        return 'Draggable Line on Fig. {self.fig.number}'
 
 
 # ============================ main line methods =============================
@@ -228,13 +212,14 @@ class Line:
 
         dragonax = []  # list of coords (px) of existing lines in the current axes
 
-        for drag in Line.all_lines:
+        otherlines = self.all_objects - set([self])
+        for line in otherlines:
 
             # if on same axis, record coords in a list to check overlap later
-            if drag.ax is ax:
+            if line.ax is ax:
 
-                x1b, y1b = Line.get_pt_position(drag.pt1)
-                x2b, y2b = Line.get_pt_position(drag.pt2)
+                x1b, y1b = Line.get_pt_position(line.pt1)
+                x2b, y2b = Line.get_pt_position(line.pt2)
                 [X1b, Y1b] = postopx.transform((x1b, y1b))
                 [X2b, Y2b] = postopx.transform((x2b, y2b))
                 dragonax.append((X1b, Y1b))
@@ -363,7 +348,7 @@ class Line:
 
         self.disconnect()  # useful ?
 
-        Line.all_lines.remove(self)
+        Line.all_objects.remove(self)
 
         del self
 
@@ -384,11 +369,10 @@ class Line:
         if selected in self.all:
             self.selected.add(selected)
 
-    def on_press(self, event):
-        """once the selected points are known, on_press manages how to
+    def on_mouse_press(self, event):
+        """once the selected points are known, on_mouse_press manages how to
         define active and inactive elements
         """
-
         if len(self.selected) == 0:
             return
         # if any component of the line is selected, it means the line is moving
@@ -446,8 +430,9 @@ class Line:
         if self.leader is True:
             self.update_position(event)
 
-    def on_release(self, event):
+    def on_mouse_release(self, event):
         """If mouse released, reset all variables related to line moving"""
+        
         if self.active is None:
             return
         else:
@@ -470,36 +455,15 @@ class Line:
 
     def on_leave_axes(self, event):
         """If mouse leaves axes it is considered the same as unclicking"""
-        self.on_release(event)
+        self.on_mouse_release(event)
 
     def on_close(self, event):
         "if figure is closed, remove line from the list of lines"
-        if self in Line.all_lines:
-            Line.all_lines.remove(self)
+        if self in Line.all_objects:
+            Line.all_objects.remove(self)
         self.disconnect()
 
 
-# ================= connect/disconnect events and callbacks ==================
-
-
-    def connect(self):
-        'connect object to figure canvas events'
-
-        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.on_press)
-        self.cidrelease = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
-        self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        self.cidpick = self.fig.canvas.mpl_connect('pick_event', self.on_pick)
-        self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
-        self.cidclose = self.fig.canvas.mpl_connect('close_event', self.on_close)
-
-    def disconnect(self):
-        'disconnect callback ids'
-        self.fig.canvas.mpl_disconnect(self.cidpress)
-        self.fig.canvas.mpl_disconnect(self.cidrelease)
-        self.fig.canvas.mpl_disconnect(self.cidmotion)
-        self.fig.canvas.mpl_disconnect(self.cidpick)
-        self.fig.canvas.mpl_disconnect(self.cidaxleave)
-        self.fig.canvas.mpl_disconnect(self.cidclose)
 
 
 # ================================ direct run ================================

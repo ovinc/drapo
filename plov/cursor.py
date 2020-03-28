@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
+from .interactive_object import InteractiveObject
+
 # ================================= example ==================================
 
 
@@ -59,7 +61,7 @@ def main():
 # =============================== Cursor class ===============================
 
 
-class Cursor:
+class Cursor(InteractiveObject):
     """Cursor following the mouse on any axes of a matplotlib figure.
 
     This class creates a cursor that moves along with the mouse. It is drawn
@@ -158,13 +160,15 @@ class Cursor:
     zooming if blitting is activated, but one needs to move the mouse.
 
     """
+    
+    name = 'Cursor'
 
     # Define colors the arrows will cycle through
     # (in addition to the one specified by the user)
     colors = ['r', 'b', 'k', 'w']
 
     # list of Cursor instances
-    cursors = []
+    all_objects = set()
 
     def __init__(self, fig=None, color='r', style=':', width=1, blit=True,
                  show_clicks=False, record_clicks=False,
@@ -172,9 +176,8 @@ class Cursor:
                  n=1000, block=False, timeout=0,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
-
-        self.fig = plt.gcf() if fig is None else fig
-        self.ax = plt.gca()
+        
+        super().__init__(fig)    
 
         self.cursor = None  # stores horizontal and vertical lines if active
         self.background = None  # this is for blitting
@@ -212,20 +215,13 @@ class Cursor:
         # below is to erase previous cursors on the figure -------------------
 
         # list all cursors on the same figure
-        fig_cursors = [c for c in Cursor.cursors if c.fig == self.fig]
+        fig_cursors = [c for c in self.all_objects if c.fig == self.fig 
+                       and c is not self]
 
         for cursor in fig_cursors:
-            i = Cursor.cursors.index(cursor)
-            Cursor.cursors.pop(i)
+            self.all_objects.remove(cursor)
             cursor.disconnect()
             del cursor
-
-        # put new cursor in list
-        Cursor.cursors.append(self)
-
-        # this seems to be a generic way to bring window to the front
-        # but I have not checked with different backends etc.
-        plt.get_current_fig_manager().show()
 
         self.connect()
 
@@ -259,8 +255,6 @@ class Cursor:
 
         return base_message + ' ' + add_message
 
-    def __str__(self):
-        return f'Cursor on Fig. {self.fig.number}.'
 
 
 # =========================== main cursor methods ============================
@@ -553,30 +547,6 @@ class Cursor:
         self.fig.canvas.stop_event_loop()
 
 
-# ================= connect/disconnect events and callbacks ==================
-
-
-    def connect(self):
-        """Connect figure events to callback functions."""
-        #self.enterfig_id = self.fig.canvas.mpl_connect('figure_enter_event', self.on_enter_figure)
-        self.enterax_id = self.fig.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
-        self.leaveax_id = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
-        self.motion_id = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
-        self.pressb_id = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_press)
-        self.releaseb_id = self.fig.canvas.mpl_connect('button_release_event', self.on_mouse_release)
-        self.pressk_id = self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
-        self.closefig_id = self.fig.canvas.mpl_connect('close_event', self.on_close)
-
-    def disconnect(self):
-        """Disconnect figure events from callback functions."""
-        #self.fig.canvas.mpl_disconnect(self.enterfig_id)
-        self.fig.canvas.mpl_disconnect(self.enterax_id)
-        self.fig.canvas.mpl_disconnect(self.leaveax_id)
-        self.fig.canvas.mpl_disconnect(self.motion_id)
-        self.fig.canvas.mpl_disconnect(self.pressb_id)
-        self.fig.canvas.mpl_disconnect(self.releaseb_id)
-        self.fig.canvas.mpl_disconnect(self.pressk_id)
-        self.fig.canvas.mpl_disconnect(self.closefig_id)
 
 
 # ========================== ginput-like functions ==========================
