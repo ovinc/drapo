@@ -85,6 +85,10 @@ Appearance of the connecting line (link):
 - `linestyle` (matplotlib's linestyle, default: continous '-').
 - `linewidth` (float, default: 1). Line width.
 
+Instanciation option:
+- `avoid_existing` (bool, default: True). Avoid overlapping existing lines
+(only avoids that edge points overlap, but lines can still cross).
+
 ### Notes
 
 - By default, the line is created on the active figure/axes. 
@@ -280,8 +284,8 @@ For just one-time selection, use `ClickFig(1)`. The background colors
 return to their original values once the ClickFig is deactivated (here, 
 after one click).
 
-Parameters
-----------
+### Parameters
+
 - n (int, default -1, i.e. forever): maximum number of clicks allowed.
 - highlight (bool, default True): change ax/fig color when mouse on them.
 

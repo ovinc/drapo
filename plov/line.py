@@ -79,6 +79,10 @@ class Line:
     - `linestyle` (matplotlib's linestyle, default: continous '-').
     - `linewidth` (float, default: 1). Line width.
     
+    Instanciation option:
+    - `avoid_existing` (bool, default:True). Avoid overlapping existing lines
+    (only avoids that edge points overlap, but lines can still cross).
+    
 
     Notes
     -----
@@ -120,7 +124,9 @@ class Line:
     def __init__(self, pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
                  pickersize=5, color='k',
                  edgestyle='.', edgesize=5,
-                 linestyle='-', linewidth=1):
+                 linestyle='-', linewidth=1,
+                 avoid_existing = True
+                 ):
 
         self.fig = plt.gcf() if fig is None else fig
         self.ax = plt.gca() if ax is None else ax
@@ -133,7 +139,7 @@ class Line:
         self.ylim = self.ax.get_ylim()
 
         # set position of line on screen so that it does not overlap others
-        x1, y1, x2, y2 = Line.set_position(self, pos, pickersize)
+        x1, y1, x2, y2 = Line.set_position(self, pos, pickersize, avoid_existing)
 
         # create edge points -------------------------------------------------
 
@@ -195,16 +201,11 @@ class Line:
 # ============================ main line methods =============================
 
 
-    def set_position(self, position, pickersize):
-        """Set position of new line, avoiding existing lines"""
-        mindist = 3*pickersize  # min distance between pts to avoid overlapping
-        maxloop = 1e3  # maximum number of loops to try to place the new line
-
+    def set_position(self, position, pickersize, avoid=True):
+        """Set position of new line, avoiding existing lines if necessary."""
+        
         ax = self.ax
-
-        postopx = ax.transData  # transform between data coords to px coords.
-        pxtopos = ax.transData.inverted()  # pixels to data coordinates
-
+        
         xmin, xmax = self.xlim
         ymin, ymax = self.ylim
 
@@ -212,6 +213,15 @@ class Line:
 
         x1, y1 = (1-a1)*xmin + a1*xmax, (1-b1)*ymin + b1*ymax  # default pos.
         x2, y2 = (1-a2)*xmin + a2*xmax, (1-b2)*ymin + b2*ymax
+        
+        if avoid == False:
+            return x1, y1, x2, y2
+                    
+        mindist = 3*pickersize  # min distance between pts to avoid overlapping
+        maxloop = 1e3  # maximum number of loops to try to place the new line
+
+        postopx = ax.transData  # transform between data coords to px coords.
+        pxtopos = ax.transData.inverted()  # pixels to data coordinates     
 
         [X1, Y1] = postopx.transform((x1, y1))
         [X2, Y2] = postopx.transform((x2, y2))
@@ -444,6 +454,8 @@ class Line:
             if self.blit is True:
                 for artist in self.all:
                     artist.set_animated(False)
+                    
+        self.fig.canvas.draw()
 
         self.motionmode = None
         self.active = None
