@@ -58,7 +58,8 @@ Interactive draggable line on matplotlib figure/axes.
 Line(pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
                  pickersize=5, color='k',
                  ptstyle='.', ptsize=5,
-                 linestyle='-', linewidth=1)
+                 linestyle='-', linewidth=1,
+                 avoid_existing=True)
 ```
 
 The line is composed of three elements : two points at the edge (pt1, pt2)
@@ -130,7 +131,7 @@ lines (blit=True or blit=False).
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(fig=None, color='r', style=':', size=1, blit=True,
+Cursor(fig=None, color='r', linestyle=':', linewidth=1, blit=True,
         show_clicks=False, record_clicks=False,
         mouse_add=1, mouse_pop=3, mouse_stop=2,
         n=1000, block=False, timeout=0, 
@@ -318,9 +319,9 @@ C = Cursor(record_clicks=True, show_clicks=True, nclicks=5)
 ```
 creates a cursor that leaves a red cross at the points clicked and saves the
 corresponding position (x, y) data in a list, accessible with `C.clickdata`.
-For recording click positions, it is better to use the `hinput` function.
 The cursor is deactivated after 5 clicks, but the marks stay on the figure.
-To remove the marks, use the `erase_marks()` method.
+To remove the marks, use the `erase_marks()` method. Note that for recording
+click positions, it is preferable to use the dedicated `hinput` function.
 
 ```python
 Cursor(blit=False, color='b', size=0.5, style='-')
