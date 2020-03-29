@@ -27,9 +27,9 @@ class InteractiveObject:
     
     blit = True
     all_objects = set()  # tracking all instances of the object
-    moving_objects = []  # objects currently moving on figure
+    moving_objects = set()  # objects currently moving on figure
     background = None  # background save for blitting
-    expecting_motion = False  # True when the leading object had been selected
+    initiating_motion = False  # True when the leading object had been selected
     leader = None
 
     # (leading object is the one that triggers motion of the other selected 
@@ -43,7 +43,7 @@ class InteractiveObject:
     black = '#111111' # same in case of black background
     colors = [black, 'r', 'b', 'g', white]
 
-    def __init__(self, fig=None, ax=None, color=None):     
+    def __init__(self, fig=None, ax=None, color=None, blit=True):     
 
         self.fig = plt.gcf() if fig is None else fig
         self.ax = plt.gca() if ax is None else ax
@@ -63,6 +63,18 @@ class InteractiveObject:
             self.color = color
             if color not in self.__class__.colors:
                 self.__class__.colors.append(color)
+                
+                # set that stores info about what artists are picked
+        self.picked_artists = set() # they can be different frmo the active
+        # artists, because e.g. when a line moves as a whole, only the line
+        # is picked, but the two edge points need to be moving/active as well.
+        
+        self.moving = False # indicates whether object is currently moving.
+        
+        self.press_info = None  # stores useful useful mouse click information
+
+        # the last object to be instanciated dictates if blitting is true or not
+        self.__class__.blit = blit
 
 
         # this seems to be a generic way to bring window to the front but I
@@ -87,10 +99,8 @@ class InteractiveObject:
         "Gets point position as a tuple, from matplotlib line data"
         xpt = pt.get_xdata()
         ypt = pt.get_ydata()
-
-        x = xpt.item()  # convert numpy array to scalar
+        x = xpt.item()  # convert numpy array to scalar, faster than unpacking
         y = ypt.item()
-
         return x, y
     
     
@@ -102,12 +112,12 @@ class InteractiveObject:
         
         canvas = self.fig.canvas
         ax = self.ax
-        move_expected = self.__class__.expecting_motion
+        move_initiated = self.__class__.initiating_motion
 
-        if self.__class__.blit is True and move_expected is True:
+        if self.__class__.blit is True and move_initiated is True:
             canvas.draw()
             self.__class__.background = canvas.copy_from_bbox(ax.bbox)
-            self.__class__.expecting_motion = False
+            self.__class__.initiating_motion = False
 
         if self.__class__.blit is True:
             # without this line, the graph keeps all successive positions of
@@ -118,7 +128,7 @@ class InteractiveObject:
         for obj in self.__class__.moving_objects:
             
             # update position data of object depending on its motion mode
-            obj.update_position((x, y), obj.motionmode)
+            obj.update_position((x, y))
             
             # Draw all artists of the object (if not, some can miss in motion)
             if self.__class__.blit is True:
@@ -140,8 +150,19 @@ class InteractiveObject:
         """
         x, y = position
         return x, y, mode
-        
     
+    def create(self, options):
+        """Create object based on options. Need to be defined in subclass."""
+        pass
+    
+    def delete(self):
+        """Delete object by removing its components and references"""
+        for artist in self.all_artists:
+            artist.remove()
+        self.disconnect()
+        self.__class__.all_objects.remove(self)
+        self.fig.canvas.draw()
+
     
 # ================= connect/disconnect events and callbacks ==================
 

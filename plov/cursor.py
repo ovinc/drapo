@@ -40,24 +40,7 @@ def main():
 
     hinput(4)
 
-    # = Cursor(block=True, record_clicks=True, n=3, show_clicks=True, timeout=2)
-
-    #plt.show()
-
-    # fig2, ax3 = plt.subplots()
-    # ax3.plot(y, x, '-ok')
-
-    # c2 = Cursor()
-
-    # #plt.show()
-
-    # fig3, ax4 = plt.subplots()
-    # ax4.plot(1, 1, 'ok')
-    # data = ginput(3)
-    # plt.close(fig3)
-
-    # plt.show(block=False)
-
+   
 # =============================== Cursor class ===============================
 
 
@@ -171,7 +154,7 @@ class Cursor(InteractiveObject):
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
         
-        super().__init__(fig, color=color)    
+        super().__init__(fig, color=color, blit=blit)    
 
         self.all_artists = None  # stores horizontal and vertical lines if active
         
@@ -201,8 +184,7 @@ class Cursor(InteractiveObject):
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
         
-        self.motionmode = None  # necessary for subclassing InteractiveObject
-        self.__class__.expecting_motion = True
+        self.__class__.initiating_motion = True
 
         # below is to erase previous cursors on the figure -------------------
 
@@ -277,7 +259,7 @@ class Cursor(InteractiveObject):
 
         cursor = (hline, vline)
         self.all_artists = cursor
-        self.__class__.moving_objects.append(self)
+        self.__class__.moving_objects.add(self)
         return cursor
 
     def erase(self):
@@ -370,11 +352,11 @@ class Cursor(InteractiveObject):
         """When releasing click, reactivate cursor and redraw figure.
 
         This is in order to accommodate potential zooming/panning
-        (done later in on_motion function, using the expecting_motion parameter,
+        (done later in on_motion function, using the initiating_motion parameter,
         it does not work if done here directly, not completely sure why).
         """
         self.press = False
-        self.__class__.expecting_motion = True
+        self.__class__.initiating_motion = True
 
         # without the line below, blitting mode keeps the cursor at time of
         # the click plotted permanently for some reason.
@@ -509,7 +491,7 @@ class Cursor(InteractiveObject):
                 self.fig.canvas.stop_event_loop()
 
         if event.key in ['a', 'z', 'enter']:
-            self.__class__.expecting_motion = True  # hack to prevent display bugs
+            self.__class__.initiating_motion = True  # hack to prevent display bugs
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""

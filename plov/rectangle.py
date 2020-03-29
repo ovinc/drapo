@@ -85,10 +85,7 @@ class Rect(Line):
     def on_motion(self, event):
         pass
     
-    # key events
-    
-    def on_key_press(self, event):
-        pass
+
 
     # figure events
     
