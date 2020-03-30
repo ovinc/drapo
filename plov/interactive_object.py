@@ -25,16 +25,23 @@ class InteractiveObject:
     
     name = 'Interactive Object'
     
-    blit = True
-    all_objects = set()  # tracking all instances of the object
-    moving_objects = set()  # objects currently moving on figure
-    background = None  # background save for blitting
+    all_interactive_objects = []  # tracking all instances of all subclasses
+    # (use the all_instances() method to get instances of a single class)
+    # This list is returned by the classmethod all_objects().
+    
+    moving_objects = set()  # objects currently moving on figure. Includes
+    # all subclasses, to be able to manage motion of objects of different 
+    # classes on the same figure.
+    
+    leader = None  # Leader object that synchronizes motion and drawing of all
+    # objects when several objects are selected/moving at the same time.
+    # This feature is required due to blitting rendering issues.
+    
     initiating_motion = False  # True when the leading object had been selected
-    leader = None
-
-    # (leading object is the one that triggers motion of the other selected 
-    # objects in the case where there are several objects moving at the same 
-    # time. This feature is for synchronizing issues in blitting mode.
+    
+    # Attributes for fast rendering of motion with blitting.
+    blit = True
+    background = None
     
     # Define default colors of the class (potentially cycled through by some
     # methods. If user specifies a color not in the list, it is added to the
@@ -42,8 +49,9 @@ class InteractiveObject:
     white = '#eeeeee' # not completely white so that it is still visible
     black = '#111111' # same in case of black background
     colors = [black, 'r', 'b', 'g', white]
+    
 
-    def __init__(self, fig=None, ax=None, color=None, blit=True):     
+    def __init__(self, fig=None, ax=None, color=None, blit=True, block=False):     
 
         self.fig = plt.gcf() if fig is None else fig
         self.ax = plt.gca() if ax is None else ax
@@ -51,20 +59,10 @@ class InteractiveObject:
         # This is because adding lines can re-dimension axes limits
         self.xlim = self.ax.get_xlim()
         self.ylim = self.ax.get_ylim()
-        
-        self.all_objects.add(self)
-        
-        if color is None:
-            self.color = self.__class__.colors[0]
-        elif is_color_like(color) == False:
-            print('Warning: color not recognized. Falling back to default.')
-            self.color = self.__class__.colors[0]
-        else:
-            self.color = color
-            if color not in self.__class__.colors:
-                self.__class__.colors.append(color)
                 
-                # set that stores info about what artists are picked
+        self.all_artists = [] # all artists the object is made of
+        self.all_interactive_objects.append(self)
+        # set that stores info about what artists are picked
         self.picked_artists = set() # they can be different frmo the active
         # artists, because e.g. when a line moves as a whole, only the line
         # is picked, but the two edge points need to be moving/active as well.
@@ -75,7 +73,19 @@ class InteractiveObject:
 
         # the last object to be instanciated dictates if blitting is true or not
         self.__class__.blit = blit
-
+        
+        # defines whether the interactive object is blocking the console or not
+        self.block = block
+        
+        if color is None:
+            self.color = self.__class__.colors[0]
+        elif is_color_like(color) == False:
+            print('Warning: color not recognized. Falling back to default.')
+            self.color = self.__class__.colors[0]
+        else:
+            self.color = color
+            if color not in self.__class__.colors:
+                self.__class__.colors.append(color)
 
         # this seems to be a generic way to bring window to the front but I
         # have not checked with all backends etc, and it does not always work
@@ -83,26 +93,18 @@ class InteractiveObject:
 
 
     def __repr__(self):
-        figs = [o.fig for o in self.__class__.all_objects]
-        n_on_fig = figs.count(self.fig)
+        object_list = self.__class__.class_objects()
+        objects_on_fig = [obj for obj in object_list if obj.fig == self.fig]
+        n_on_fig = len(objects_on_fig)
+        n = objects_on_fig.index(self) + 1
         name = self.__class__.name
-        return f'{name} #{n_on_fig} on Fig. {self.fig.number}.'
+        return f'{name} #{n}/{n_on_fig} on Fig. {self.fig.number}.'
 
     def __str__(self):
         name = self.__class__.name
         return f'{name} on Fig. {self.fig.number}.'
     
 # ================================== methods =================================
-    
-    @staticmethod
-    def get_pt_position(pt):
-        "Gets point position as a tuple, from matplotlib line data"
-        xpt = pt.get_xdata()
-        ypt = pt.get_ydata()
-        x = xpt.item()  # convert numpy array to scalar, faster than unpacking
-        y = ypt.item()
-        return x, y
-    
     
     def update_graph(self, event):
         """Update graph with the moving artists. Called only by the leader."""
@@ -151,17 +153,76 @@ class InteractiveObject:
         x, y = position
         return x, y, mode
     
+    
     def create(self, options):
         """Create object based on options. Need to be defined in subclass."""
         pass
+    
     
     def delete(self):
         """Delete object by removing its components and references"""
         for artist in self.all_artists:
             artist.remove()
+        self.all_artists = []
         self.disconnect()
-        self.__class__.all_objects.remove(self)
+        self.__class__.all_interactive_objects.remove(self)
         self.fig.canvas.draw()
+        if self.block is True:
+                self.fig.canvas.stop_event_loop()
+                
+    def delete_others(self, *args):
+        """Delete other instances of the same class (eccluding parents/children)
+        
+        Options 'all', 'fig', 'ax'. If no argument, assumes 'all'.
+        """
+        if len(args) == 0:
+            option = 'all'
+        else:
+            option, *_ = args 
+            
+        all_instances = self.__class__.class_objects()
+        if option == 'all':
+            instances = all_instances
+        elif option == 'fig':
+            instances = [obj for obj in all_instances if obj.fig == self.fig]
+        elif option == 'ax':
+            instances = [obj for obj in all_instances if obj.ax == self.ax]
+        else:
+            raise ValueError(f"{option} is not a valid argument for delete_others(). "
+                             "Possible values: 'all', 'fig', 'ax'.")
+
+        others = set(instances) - {self}
+        for other in others:
+            other.delete()
+            
+    
+    @classmethod
+    def class_objects(cls):
+        """Return all instances of a given class, excluding parent class."""
+        # note : isinstance(obj, class) would also return the parent's objects
+        instances = [obj for obj in cls.all_objects() if type(obj) is cls]
+        return instances
+    
+    @classmethod
+    def all_objects(cls):
+        """Return all interactive objects, including parents and subclasses."""
+        return cls.all_interactive_objects
+            
+    @classmethod
+    def clear(cls):
+        """Delete all interactive objects of the class and its subclasses."""
+        objects = [obj for obj in cls.all_objects()]  # needed to avoid iterating over decreasing set
+        for obj in objects:
+            obj.delete()
+            
+    @staticmethod
+    def get_pt_position(pt):
+        "Gets point position as a tuple, from matplotlib line data"
+        xpt = pt.get_xdata()
+        ypt = pt.get_ydata()
+        x = xpt.item()  # convert numpy array to scalar, faster than unpacking
+        y = ypt.item()
+        return x, y
 
     
 # ================= connect/disconnect events and callbacks ==================
@@ -169,18 +230,25 @@ class InteractiveObject:
     def connect(self):
         """connect object to figure canvas events"""
         # mouse events
-        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_press)
-        self.cidrelease = self.fig.canvas.mpl_connect('button_release_event', self.on_mouse_release)
-        self.cidpick = self.fig.canvas.mpl_connect('pick_event', self.on_pick)
-        self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)    
+        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', 
+                                                    self.on_mouse_press)
+        self.cidrelease = self.fig.canvas.mpl_connect('button_release_event',
+                                                      self.on_mouse_release)
+        self.cidpick = self.fig.canvas.mpl_connect('pick_event',
+                                                   self.on_pick)
+        self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event',
+                                                     self.on_motion)    
         #key events
-        self.cidpressk = self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.cidpressk = self.fig.canvas.mpl_connect('key_press_event',
+                                                     self.on_key_press)
         # figure events
-        self.cidaxenter = self.fig.canvas.mpl_connect('axes_enter_event', self.on_enter_axes)
-        self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event', self.on_leave_axes)
-        self.cidclose = self.fig.canvas.mpl_connect('close_event', self.on_close)
+        self.cidaxenter = self.fig.canvas.mpl_connect('axes_enter_event',
+                                                      self.on_enter_axes)
+        self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event',
+                                                      self.on_leave_axes)
+        self.cidclose = self.fig.canvas.mpl_connect('close_event',
+                                                    self.on_close)
 
-   
     def disconnect(self):
         """disconnect callback ids"""    
         # mouse events
@@ -198,6 +266,7 @@ class InteractiveObject:
 
 # ============================ callback functions ============================
 
+# Need to be defined by the subclasses.
 
     # mouse events 
     

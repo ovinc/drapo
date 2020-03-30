@@ -105,7 +105,7 @@ class Cursor(InteractiveObject):
     - `erase_marks()`: erase click marks on the plot.
     - `erase_data()`: reset recorded click data.
 
-    The methods `create` and `erase` are used internally within the class and
+    The methods `create` and `delete` are used internally within the class and
     are not meant for the user.
 
     Useful class attributes
@@ -145,8 +145,8 @@ class Cursor(InteractiveObject):
     """
     
     name = 'Cursor'
-
-
+    
+    
     def __init__(self, fig=None, color='r', linestyle=':', linewidth=1, 
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
@@ -154,55 +154,43 @@ class Cursor(InteractiveObject):
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
         
-        super().__init__(fig, color=color, blit=blit)    
+        super().__init__(fig, color=color, blit=blit, block=block)    
 
-        self.all_artists = None  # stores horizontal and vertical lines if active
-        
+        # Cursor state attributes
         self.press = False  # active when mouse is currently pressed
-        
-        self.__class__.blit = blit  # blitting allows for fast rendering
-        # (last instance sets the blit option for the whole class)
-
-        self.style = linestyle
-        self.width = linewidth
-
         self.visibility = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
         self.inaxes = False  # True when mouse is in axes
 
+        # Appearance options
+        self.style = linestyle
+        self.width = linewidth
+        self.marksymbol = mark_symbol
+        self.marksize = mark_size
+        
+        # Recording click options
         self.markclicks = show_clicks
         self.recordclicks = record_clicks
-
         self.clickbutton = mouse_add
         self.removebutton = mouse_pop
         self.stopbutton = mouse_stop
 
-        self.marksymbol = mark_symbol
-        self.marksize = mark_size
+        # Recording click data
         self.clickpos = None  # temporarily stores the click position
-        self.clicknumber = 0  # tracks the number of clicks with s
+        self.clicknumber = 0  # tracks the number of clicks
         self.n = n  # maximum number of clicks, after which cursor is deactivated
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
         
         self.__class__.initiating_motion = True
 
-        # below is to erase previous cursors on the figure -------------------
-
-        # list all cursors on the same figure
-        fig_cursors = [c for c in self.__class__.all_objects if c.fig == self.fig 
-                       and c is not self]
-
-        for cursor in fig_cursors:
-            self.__class__.all_objects.remove(cursor)
-            cursor.disconnect()
-            del cursor
+        self.delete_others('fig') # delete all other existing cursors on the figure
 
         self.connect()
 
         # the blocking option below needs to be after connect()
-        self.block = block
         if self.block is True:
             self.fig.canvas.start_event_loop(timeout=timeout)
+            
 
     def __repr__(self):
 
@@ -238,9 +226,8 @@ class Cursor(InteractiveObject):
     def create(self, event):
         """Draw a cursor (h+v lines) that stop at the edge of the axes."""
         ax = self.ax
-
-        pos = (event.xdata, event.ydata)
-        (x, y) = pos
+        
+        x, y = event.xdata, event.ydata
 
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
@@ -257,20 +244,9 @@ class Cursor(InteractiveObject):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        cursor = (hline, vline)
-        self.all_artists = cursor
+        self.all_artists = hline, vline
         self.__class__.moving_objects.add(self)
-        return cursor
 
-    def erase(self):
-        """Erase cursor, called e.g. when the mouse exits the axes."""
-        (hline, vline) = self.all_artists
-        hline.remove()
-        vline.remove()
-        self.__class__.moving_objects.remove(self)
-        self.fig.canvas.draw()
-        self.all_artists = None
-        return
 
     def update_position(self, position, mode=None):
         """Update position of the cursor to follow mouse event."""
@@ -289,16 +265,60 @@ class Cursor(InteractiveObject):
         vline.set_ydata([ymin, ymax])
 
 
+    def erase(self):
+        """Lighter than delete(), needed to make cursor visibility off.
+        
+        (contrary to delete(), keeps object connectedto figure events 
+         and in the all_objects list).
+        """
+        for artist in self.all_artists:
+            artist.remove()
+        self.all_artists = []
+        self.__class__.moving_objects.remove(self)
+        self.fig.canvas.draw()
+        
+
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
         for mark in self.marks:
             mark.remove()
         self.fig.canvas.draw()
+        
 
     def erase_data(self):
         """Erase data of recorded clicks"""
         self.clickdata = []
+        
+    
+    def add_point(self, pos):
+        """Add point to the click data (triggered by click or key press)"""
+        x, y = pos
+        if self.recordclicks is True:
+            self.clickdata.append((x, y))
+            self.clicknumber += 1
 
+        if self.markclicks is True:
+            mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color,
+                                 markersize=self.marksize)
+            self.fig.canvas.draw()
+            self.marks.append(mark)
+
+    def remove_point(self):
+        """Add point to the click data (triggered by click or key press)"""            
+        if self.recordclicks is True:
+            if self.clicknumber == 0:
+                pass
+            else:
+                self.clicknumber -= 1
+                self.clickdata.pop(-1)  # remove last element
+
+        if self.markclicks is True:
+            if len(self.marks) == 0:
+                pass
+            else:
+                mark = self.marks.pop(-1)
+                mark.remove()
+            self.fig.canvas.draw()
 
 # ============================ callback functions ============================
 
@@ -309,14 +329,13 @@ class Cursor(InteractiveObject):
     #     self.fig = event.canvas.figure
     #     self.connect()
     #     print(self.fig)
+    
 
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
-
-        self.ax = event.inaxes
-
         self.inaxes = True
-
+        self.ax = event.inaxes
+        
         if self.visibility is True:
             self.create(event)
 
@@ -325,29 +344,30 @@ class Cursor(InteractiveObject):
 
         if self.__class__.blit is True:
             self.__class__.background = canvas.copy_from_bbox(self.ax.bbox)
+            
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
-
         self.inaxes = False
-
-        if self.all_artists is not None:
+        if self.visibility == True:
             self.erase()
             
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
-        if self.all_artists is None:
+        if self.visibility == False:
             return  # no active cursor --> do nothing
         if self.press is True:
             return  # to avoid weird interactions with zooming/panning
         self.update_graph(event)
+        
 
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
         self.press = True
         self.clickpos = (event.xdata, event.ydata)
-
+        
+        
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
 
@@ -369,35 +389,15 @@ class Cursor(InteractiveObject):
         if (x, y) == self.clickpos:
 
             if event.button == self.clickbutton:
-
-                if self.recordclicks is True:
-                    self.clickdata.append((x, y))
-                    self.clicknumber += 1
-
-                if self.markclicks is True:
-                    mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color,
-                                         markersize=self.marksize)
-                    self.fig.canvas.draw()
-                    self.marks.append(mark)
+                self.add_point((x, y))
 
             elif event.button == self.removebutton:
-
-                if self.recordclicks is True:
-                    self.clicknumber -= 1
-                    self.clickdata.pop(-1)  # remove last element
-
-                if self.markclicks is True:
-                    mark = self.marks.pop(-1)
-                    mark.remove()
-                    self.fig.canvas.draw()
+                self.remove_point()
 
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
-            if self.all_artists is not None:
-                self.erase()
-            self.disconnect()
-            if self.block is True:
-                self.fig.canvas.stop_event_loop()
+            self.delete()
+                
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -410,7 +410,6 @@ class Cursor(InteractiveObject):
             - "z" : cancel last point
             - enter : stop recording
         """
-
 # ----------------- changes in appearance of cursor --------------------------
 
         if event.key == " ":  # Space Bar
@@ -443,63 +442,31 @@ class Cursor(InteractiveObject):
             self.erase()  # easy way to not have to update artist
             self.create(event)
 
-# ------------  hack to be able to see the changes directly ------------------
-        if event.key in [" ", 'right', 'left', 'up', 'down']:
-            self.update_graph(event)
-
 # ------------------- commands that mimic mouse events -----------------------
 
         x, y = (event.xdata, event.ydata)
 
         if event.key == 'a':
-
-            if self.recordclicks is True:
-                self.clickdata.append((x, y))
-                self.clicknumber += 1
-
-            if self.markclicks is True:
-                mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color,
-                                     markersize=self.marksize)
-                self.fig.canvas.draw()
-                self.marks.append(mark)
-
+            self.add_point((x, y))
+            
         # I use 'z' here because backspace (as used in ginput) interferes
         # with the interactive "back" option in matplotlib
         elif event.key == 'z':
-
-            if self.recordclicks is True:
-                if self.clicknumber == 0:
-                    pass
-                else:
-                    self.clicknumber -= 1
-                    self.clickdata.pop(-1)  # remove last element
-
-            if self.markclicks is True:
-                if len(self.marks) == 0:
-                    pass
-                else:
-                    mark = self.marks.pop(-1)
-                    mark.remove()
-                self.fig.canvas.draw()
+            self.remove_point()
 
         if self.clicknumber == self.n or event.key == 'enter':
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
-            if self.all_artists is not None:
-                self.erase()
-            self.disconnect()
-            if self.block is True:
-                self.fig.canvas.stop_event_loop()
+            self.delete()
 
-        if event.key in ['a', 'z', 'enter']:
-            self.__class__.initiating_motion = True  # hack to prevent display bugs
+# --------------------implement changes on graph -----------------------------
+        
+        # hack to be able to see the changes directly 
+        self.__class__.initiating_motion = True
+        self.update_graph(event)
 
     def on_close(self, event):
         """Delete cursor if figure is closed"""
-        if self.all_artists is not None:
-            self.erase()
-        self.disconnect()
-        self.fig.canvas.stop_event_loop()
-
+        self.delete()
 
 
 # ========================== ginput-like functions ==========================

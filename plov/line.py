@@ -212,7 +212,7 @@ class Line(InteractiveObject):
 
         dragonax = []  # list of coords (px) of existing lines in the current axes
 
-        otherlines = self.all_objects - set([self])
+        otherlines = set(self.class_objects()) - set([self])
         for line in otherlines:
 
             # if on same axis, record coords in a list to check overlap later

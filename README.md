@@ -197,7 +197,7 @@ The last 2 parameters customize appearance of click marks when shown.
 - `erase_marks()`: erase click marks on the plot. 
 - `erase_data()`: reset recorded click data.
 
-The methods `create` and `erase` are used internally within the class and
+The methods `create` and `delete` are used internally within the class and
 are not meant for the user.
 
 ### Useful class attributes
