@@ -1,7 +1,6 @@
 """InteractiveObject class, for plot-ov. Not for direct use, just subclassing.
 
-Classes Line and Cursor subclass InteractiveObject defined here.
-Rectangle subclasses Line, so it is a sub-subclass of InteractiveObject
+Classes Line, Rect and Cursor subclass InteractiveObject defined here.
 """
 
 import matplotlib.pyplot as plt
@@ -11,16 +10,7 @@ from matplotlib.colors import is_color_like
 class InteractiveObject:
     """Base class for moving objects on a figure. Used for subclassing.
     
-    The most important method it defines is `update_graph`, which manages
-    the motion of objects on the figure. Motion is synchronized using one
-    of the moving objects as a `leader`, which needs to be defined in the
-    subclasses; only this object to calls `update_graph`. Indeed, the
-    latter method has a loop on all `moving_objects` inside of it.
-    
-    This base class also manages the connection of matplotlib figure events
-    through the connect() and disconnect() methods and associated callbacks.
-    The callbacks are empty here and those needed have to be defined in the
-    subclasses.
+    See CONTRIBUTING.md for information on how to use this class.
     """
     
     name = 'Interactive Object'
@@ -59,19 +49,26 @@ class InteractiveObject:
         # This is because adding lines can re-dimension axes limits
         self.xlim = self.ax.get_xlim()
         self.ylim = self.ax.get_ylim()
+        
+        # Connect matplotlib event handling to callback functions
+        self.connect()
+        
+        # Tracks instances of any interactive objects of any subclass.
+        self.all_interactive_objects.append(self)
                 
         self.all_artists = [] # all artists the object is made of
-        self.all_interactive_objects.append(self)
         # set that stores info about what artists are picked
         self.picked_artists = set() # they can be different frmo the active
         # artists, because e.g. when a line moves as a whole, only the line
         # is picked, but the two edge points need to be moving/active as well.
         
-        self.moving = False
+        self.moving = False  # faster way to check moving objects than to measure the length of moving_objects
         self.press_info = {'currently_pressed': False}  # stores useful useful mouse click information
 
         # the last object to be instanciated dictates if blitting is true or not
         self.__class__.blit = blit
+        # Reset leading artist when instanciating a new object
+        self.__class__.leader = None
         
         # defines whether the interactive object is blocking the console or not
         self.block = block
@@ -97,11 +94,12 @@ class InteractiveObject:
         n_on_fig = len(objects_on_fig)
         n = objects_on_fig.index(self) + 1
         name = self.__class__.name
-        return f'{name} #{n}/{n_on_fig} on Fig. {self.fig.number}.'
+        return f'{name} #{n}/{n_on_fig} in Fig. {self.fig.number}.'
 
     def __str__(self):
-        name = self.__class__.name
-        return f'{name} on Fig. {self.fig.number}.'
+        #name = self.__class__.name
+        #return f'{name} on Fig. {self.fig.number}.'
+        return self.__repr__()
     
 # ================================== methods =================================
     
@@ -151,7 +149,7 @@ class InteractiveObject:
         triggers re-drawing of all other moving lines.
         Note : all moving lines are necesary on the same axes"""
         
-        if len(self.__class__.moving_objects) == 1:
+        if self.__class__.leader is None:
             self.__class__.leader = self
             # Below is to delay background setting for blitting until all
             # artists have been defined as animated.
@@ -164,15 +162,6 @@ class InteractiveObject:
         self.active_info = self.set_active_info()
         # store location of pts and of click
         self.press_info = self.set_press_info(event)
-        
-        # create a specific dictionary that stores points position during motion
-        self.x_inmotion = {}
-        self.y_inmotion = {} 
-        pts = self.all_artists[:2]
-        for pt in pts:
-            xpt, ypt = self.get_pt_position(pt)
-            self.x_inmotion[pt] =  xpt
-            self.y_inmotion[pt] =  ypt
             
     
     def reset_after_motion(self):
@@ -180,18 +169,14 @@ class InteractiveObject:
         self.picked_artists = set()
         self.active_info = {}
         self.press_info = {'currently_pressed': False}
-        # Reset class variables that store moving information
         self.moving = False
+        # Reset class variables that store moving information
         self.__class__.moving_objects.remove(self)
-        
-        # Store new background
-        # ax = self.ax
-        # canvas = self.fig.canvas
-        # self.__class__.background = canvas.copy_from_bbox(ax.bbox)
-          
+        if self is self.__class__.leader:
+            self.__class__.leader = None
 
 
-    def update_position(self, position, mode=None):
+    def update_position(self, position):
         """Update object position depending on moving mode and mouse position.
         
         Here it does not do much, but the method needs to be rewritten in
@@ -211,7 +196,7 @@ class InteractiveObject:
         return press_info
     
     
-    def create(self, options):
+    def create(self):
         """Create object based on options. Need to be defined in subclass."""
         pass
     
@@ -239,10 +224,12 @@ class InteractiveObject:
                 self.fig.canvas.stop_event_loop()    
         else:
             print('Warning: eraser function not called properly.')
+            
                 
     def erase(self):
         """Lighter than delete(), keeps object connected and referenced"""
         self.eraser('erase')
+        
         
     def delete(self):
         """Hard delete of object by removing its components and references"""

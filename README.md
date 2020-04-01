@@ -290,13 +290,16 @@ Use `ClickFig()` to make the interactive mouse active, and select active axes
 at will while still working on them. Use `ClickFig(highlight=False)` to not 
 see background color change during hovering.
 
-For just one-time selection, use `ClickFig(1)`. The background colors
+For just one-time selection, use `ClickFig()`. The background colors
 return to their original values once the ClickFig is deactivated (here, 
 after one click).
 
+To be able to select n times, use `ClickFig(n)`. Note that it is only the
+last axes clicked that are activated.
+
 ### Parameters
 
-- n (int, default -1, i.e. forever): maximum number of clicks allowed.
+- n (int, default 1): maximum number of clicks allowed.
 - highlight (bool, default True): change ax/fig color when mouse on them.
 
 

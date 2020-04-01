@@ -1,18 +1,13 @@
-""" Extensions to Matplotlib: Cursor class, and ginput function.
+""" Extensions to Matplotlib: Cursor class, and ginput/hinput functions.
 
 This module contains a Cursor class (cursor that moves with the mouse) and
-ginput/hinput functions similar to the matplotlib ginput, but with a cursor.
+ginput/hinput functions similar to the matplotlib ginput, but with a cursor
+and allowing zooming/panning in the case of hinput.
 """
 
 # TODO - To allow cursor to appear on multiple figures, it is necessary to
 # connect figure events to callbacks for every existing figure --> do a figure list
 # and connect one by one.
-
-# TODO -- move contents of mouse_release etc. to more generic methods
-
-# TODO -- create function draw() which adds points without saving anything
-
-# TODO -- merge key and mouse events management code to avoid duplicates
 
 
 import matplotlib
@@ -183,8 +178,6 @@ class Cursor(InteractiveObject):
         self.n = n  # maximum number of clicks, after which cursor is deactivated
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
-
-        self.connect()
         
         self.fig.canvas.draw()
 
@@ -250,7 +243,7 @@ class Cursor(InteractiveObject):
         self.__class__.moving_objects.add(self)
 
 
-    def update_position(self, position, mode=None):
+    def update_position(self, position):
         """Update position of the cursor to follow mouse event."""
 
         x, y = position  

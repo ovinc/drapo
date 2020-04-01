@@ -142,8 +142,6 @@ class Line(InteractiveObject):
         # create line, and attributes pt1, pt2, link
         self.create(options)
 
-        self.connect()  # connect to fig events
-
         # to prevent any shift in axes limits when instanciating line. The
         # initial self.xlim / self.ylim setting is done in InteractiveObject
         self.ax.set_xlim(self.xlim)
@@ -263,8 +261,9 @@ class Line(InteractiveObject):
 
     def set_active_info(self):
         """separates points into active/inactive and detects motion mode"""
-        
         line = self.all_artists[2]
+        
+        # set which points are active and corresponding motion mode ----------
         
         if len(self.picked_artists) == 1:  # only line selected --> move as a whole
             mode = 'whole'
@@ -281,7 +280,24 @@ class Line(InteractiveObject):
         
         active_pts = set(active_elements) - {line}
         
+        # initiate dictionaries storing position of pts duting motion --------
+        # TODO -- improve the logics of how all this is defined.
+        self.set_motion_tracking()
+        
         return {'active_pts': active_pts, 'mode': mode}
+    
+    
+    def set_motion_tracking(self):
+        """set up dictionaries that store positions of elements during motion"""
+        x_inmotion = {}
+        y_inmotion = {} 
+        pts = self.all_artists[:2]
+        for pt in pts:
+            xpt, ypt = self.get_pt_position(pt)
+            x_inmotion[pt] =  xpt
+            y_inmotion[pt] =  ypt
+        self.x_inmotion = x_inmotion
+        self.y_inmotion = y_inmotion
     
     
     def set_press_info(self, event):
