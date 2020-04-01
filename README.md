@@ -46,7 +46,7 @@ installation you would like to install the package with.
 
 **Note**: if you wish to keep the package files in the folder where the files
 were downloaded and/or edit the files with direct effect in Python, run the
-following install command instead: `python -m pip install . -e`.
+following install command instead: `python -m pip install -e .`.
 
 
 ## Line class

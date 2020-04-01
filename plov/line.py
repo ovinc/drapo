@@ -13,6 +13,7 @@
 
 # TODO -- key press to make the line exactly vertical or horiztontal
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import math as m
@@ -22,6 +23,9 @@ from .interactive_object import InteractiveObject
 # ================================= example ==================================
 
 def main():
+    
+    matplotlib.use('Qt5Agg')  # blitting does not work with tkagg ot macosx
+    
     """ example of instances of Lines in different figures and axes"""
     fig, ax = plt.subplots()
     ax.plot([1, 0], [11, 13], '-r')
@@ -41,14 +45,14 @@ def main():
     ax3.plot(tt, xx)
     ax4.plot(z, '-ob')
 
-    Line(ax=ax3)
-    Line(ax=ax4)
+    l3 = Line(ax=ax3)
+    l4 = Line(ax=ax4)
 
-    l3 = Line()
+    l5 = Line()
 
     plt.show(block=False)
     
-    return l1, l2, l3
+    return l1, l2, l3, l4, l5
 
 
 # ================================ line class ================================
@@ -136,7 +140,7 @@ class Line(InteractiveObject):
         options = (pos, pickersize, self.color, ptstyle, ptsize, 
                    linestyle, linewidth, avoid_existing)
         # create line, and attributes pt1, pt2, link
-        self.all_artists = self.create(options)
+        self.create(options)
 
         self.connect()  # connect to fig events
 
@@ -144,6 +148,9 @@ class Line(InteractiveObject):
         # initial self.xlim / self.ylim setting is done in InteractiveObject
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
+        
+        self.fig.canvas.draw()
+        #plt.show()
 
 
 # ============================ main line methods =============================
@@ -152,7 +159,7 @@ class Line(InteractiveObject):
 # generic callback functions (see below)
 
     def create(self, options):
-        """Creates the line and its components (pt1, pt2, link)"""
+        """Create the line and its components (pt1, pt2, link)"""
         
         # If the structure below is changed, verify that subclasses are
         # changed as well
@@ -182,7 +189,7 @@ class Line(InteractiveObject):
                                   linestyle=linestyle, linewidth=linewidth)
 
         # assemble lines and pts into "all" ----------------------------------
-        return pt1, pt2, link
+        self.all_artists = pt1, pt2, link
         
 
     def set_initial_position(self, position, pickersize, avoid=True):
@@ -198,7 +205,7 @@ class Line(InteractiveObject):
         x1, y1 = (1-a1)*xmin + a1*xmax, (1-b1)*ymin + b1*ymax  # default pos.
         x2, y2 = (1-a2)*xmin + a2*xmax, (1-b2)*ymin + b2*ymax
         
-        if avoid == False:
+        if not avoid:
             return x1, y1, x2, y2
                     
         mindist = 3*pickersize  # min distance between pts to avoid overlapping
@@ -328,50 +335,6 @@ class Line(InteractiveObject):
         link.set_xdata([self.x_inmotion[pt1], self.x_inmotion[pt2]])
         link.set_ydata([self.y_inmotion[pt1], self.y_inmotion[pt2]])
         
-        
-    def initiate_motion(self, event):
-        """Initiate motion and define leading artist that synchronizes plot.
-        
-        In particular, if there are several moving objects, save background
-        (for blitting) only once. The line selected first becomes the leader
-        for moving events, i.e. it is the one that detects mouse moving and 
-        triggers re-drawing of all other moving lines.
-        Note : all moving lines are necesary on the same axes"""
-        
-        if len(self.__class__.moving_objects) == 1:
-            self.__class__.leader = self
-            # Below is to delay background setting for blitting until all
-            # artists have been defined as animated.
-            # This is because the canvas.draw() and/or canvas_copy_from_bbox()
-            # calls need to be made with all moving artists declared as animated
-            self.__class__.initiating_motion = True
-            self.fig.canvas.draw()
-            
-        # find which elements need to be active/updated during mouse motion
-        self.active_info = self.set_active_info()
-        # store location of pts and of click
-        self.press_info = self.set_press_info(event)
-        
-        # create a specific dictionary that stores points position during motion
-        self.x_inmotion = {}
-        self.y_inmotion = {} 
-        pts = self.all_artists[:2]
-        for pt in pts:
-            xpt, ypt = self.get_pt_position(pt)
-            self.x_inmotion[pt] =  xpt
-            self.y_inmotion[pt] =  ypt
-            
-    
-    def reset_after_motion(self):
-        """Reset attributes that should be active only during motion."""
-        self.picked_artists = set()
-        self.active_info = {}
-        self.press_info = {}
-        self.moving = False
-        # Reset class variables that store moving information
-        self.__class__.moving_objects.remove(self)
-        self.__class__.background = None
-          
 
 # ============================ callback functions ============================
 
@@ -382,7 +345,6 @@ class Line(InteractiveObject):
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
         selected = event.artist
-
         # right click anywhere on the line, including ends, and it removes it.
         if event.mouseevent.button == 3 and (selected in self.all_artists):
             self.delete()
@@ -400,7 +362,7 @@ class Line(InteractiveObject):
         else:
             self.__class__.moving_objects.add(self)
             self.moving = True
-            if self.__class__.blit is True:
+            if self.__class__.blit:
                 for artist in self.all_artists:
                     artist.set_animated(True)
 
@@ -409,8 +371,7 @@ class Line(InteractiveObject):
 
     def on_motion(self, event):
         """Leader artist triggers graph update based on mouse position"""
-        
-        if self.moving == False:
+        if not self.moving:
             return
         # only the leader triggers moving events (others drawn in update_graph)
         if self.__class__.leader is self:
@@ -423,7 +384,7 @@ class Line(InteractiveObject):
         if self not in self.__class__.moving_objects:
             return
         else:
-            if self.__class__.blit is True:
+            if self.__class__.blit:
                 for artist in self.all_artists:
                     artist.set_animated(False)
                     
@@ -434,11 +395,11 @@ class Line(InteractiveObject):
     def on_leave_axes(self, event):
         """If mouse leaves axes it is considered the same as unclicking"""
         self.on_mouse_release(event)
+        
 
     def on_close(self, event):
         "if figure is closed, remove line from the list of lines"
         self.delete()
-
 
 
 # ================================ direct run ================================
