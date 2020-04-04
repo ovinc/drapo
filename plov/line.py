@@ -1,17 +1,10 @@
 """Extensions to Matplotlib: Line class (draggable line)"""
 
-# TODO: -- interactive initiation of line position (with ginput or equivalent)
 # TODO: -- add double click to "freeze" line to avoid moving it by mistake later?
-
-# TODO -- be able to continue to drag line even if mouse is outside of axes
-# (probably, need to use figure coordinate transforms)
-
-# TODO -- add keystroke controls (e.g. to delete the line)
-
-# TODO -- use pixel coordinates to avoid confusing motion when axes are not
-# linear e.g. logscale.
-
+# TODO -- add keystroke controls (e.g. to delete the line)?
 # TODO -- key press to make the line exactly vertical or horiztontal
+# TODO -- live indication of the slope of the line.
+# TODO -- add a blocking option ?
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -20,56 +13,49 @@ import math as m
 
 from .interactive_object import InteractiveObject
 
-# ================================= example ==================================
+# ================================= Testing ==================================
 
-def main():
+def main(blit=True, backend=None):  # For testing purposes
     
-    matplotlib.use('Qt5Agg')  # blitting does not work with tkagg ot macosx
+    if backend is not None:
+        matplotlib.use(backend)
     
     """ example of instances of Lines in different figures and axes"""
-    fig, ax = plt.subplots()
-    ax.plot([1, 0], [11, 13], '-r')
+    fig1, ax1 = plt.subplots()
+    tt = np.linspace(0, 4, 100000)
+    xx = np.exp(-tt)
+    ax1.plot(tt, xx, '-b')
+    
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
 
     l1 = Line()
 
-    fig2, ax2 = plt.subplots()
-    tt = np.linspace(0, 4, 100000)
-    xx = np.exp(-tt)
-    ax2.plot(tt, xx, '-b')
-
-    l2 = Line()
-
     z = np.random.randn(1000)
 
-    fig3, (ax3, ax4) = plt.subplots(1, 2)
-    ax3.plot(tt, xx)
-    ax4.plot(z, '-ob')
+    fig2, (ax2a, ax2b) = plt.subplots(1, 2)
+    ax2a.plot(tt, xx)
+    ax2b.plot(z, '-ob')
+    
+    ax2a.set_yscale('log')
 
-    l3 = Line(ax=ax3)
-    l4 = Line(ax=ax4)
+    l2 = Line(ax=ax2a)
+    l3 = Line(ax=ax2b)
 
-    l5 = Line()
+    l4 = Line(blit=blit)  # this one is plot in current axes, and sets the blit behavior of all lines
 
     plt.show(block=False)
     
-    return l1, l2, l3, l4, l5
+    return l1, l2, l3, l4
 
 
-# ================================ line class ================================
+# ================================ Line class ================================
 
 
 class Line(InteractiveObject):
     """Interactive draggable line on matplotlib figure/axes.
-
-    The line is composed of three elements : two points at the edge (pt1, pt2)
-    and the line between them (link), with customizable appearance.
-
-    Dragging the line can be done in two different ways:
-        - clicking on one edge: then the other edge is fixed during motion
-        - clicking on the line itself: then the line moves as a whole
-
-    Right-clicking removes and deletes the line.
-
+    
+    Left click to drag the line, right click to remove it.
 
     Parameters
     ----------
@@ -86,43 +72,13 @@ class Line(InteractiveObject):
     - `ptsize` (float, default: 5). Marker size.
 
     Appearance of the connecting line (link):
-    - `linestyle` (matplotlib's linestyle, default: continous '-').
+    - `linestyle` (matplotlib's linestyle, default: continuous '-').
     - `linewidth` (float, default: 1). Line width.
     
     Instanciation option:
     - `avoid_existing` (bool, default:True). Avoid overlapping existing lines
     (only avoids that edge points overlap, but lines can still cross).
     
-
-    Notes
-    -----
-    
-    - By default, the line is created on the active figure/axes. 
-    To instanciate a line in other figure/axes, either specify the key/ax
-    parameters, or use `ClickFig()` to activate these axes.
-    
-    - If the figure uses non-linear axes (e.g. log), dragging the line as a 
-    whole can generate confusing motion. It is better to use edge dragging 
-    only in this situation. This "bug" could be fixed by tracking pixel 
-    motion of the line instead of axes coordinates.
-
-    - For now, control over a line is lost when the mouse exits the axes. If
-    this happens, just bring the mouse back in the axes and click on the line.
-
-    - When instanciating a line, there is a check to see if any of the edges
-    overlap with an edge of an existing line. If it's the case, the line is
-    shited (up and left) to avoid overlapping.
-
-    - If edges of different lines overlap at some point, it is easy to
-    separate them by clicking on one of the lines, away from the edges, to
-    drag it awway.
-
-    - If two lines coincide completely (within pickersize), it is however not
-    possible to separate them again. Best is to consider them as a single line
-    and instanciate another line.
-    
-    - The last Line instance dictates the blitting behavior for all existing
-    lines (blit=True or blit=False).
     """
     
     name = 'Draggable Line'
@@ -179,8 +135,8 @@ class Line(InteractiveObject):
 
         # create connecting line (link) ---------------------------------------
 
-        x1, y1 = self.__class__.get_pt_position(pt1)
-        x2, y2 = self.__class__.get_pt_position(pt2)
+        x1, y1 = self.get_pt_position(pt1, 'data')
+        x2, y2 = self.get_pt_position(pt2, 'data')
 
         link, = self.ax.plot([x1, x2], [y1, y2], picker=pickersize,
                                   c=color,
@@ -209,11 +165,8 @@ class Line(InteractiveObject):
         mindist = 3*pickersize  # min distance between pts to avoid overlapping
         maxloop = 1e3  # maximum number of loops to try to place the new line
 
-        postopx = ax.transData  # transform between data coords to px coords.
-        pxtopos = ax.transData.inverted()  # pixels to data coordinates     
-
-        [X1, Y1] = postopx.transform((x1, y1))
-        [X2, Y2] = postopx.transform((x2, y2))
+        X1, Y1 = self.datatopx((x1, y1))
+        X2, Y2 = self.datatopx((x2, y2))
 
         dragonax = []  # list of coords (px) of existing lines in the current axes
 
@@ -224,11 +177,8 @@ class Line(InteractiveObject):
             if line.ax is ax:
                 
                 pt1, pt2 = line.all_artists[:2]
-
-                x1b, y1b = self.__class__.get_pt_position(pt1)
-                x2b, y2b = self.__class__.get_pt_position(pt2)
-                [X1b, Y1b] = postopx.transform((x1b, y1b))
-                [X2b, Y2b] = postopx.transform((x2b, y2b))
+                X1b, Y1b = self.get_pt_position(pt1, 'px')
+                X2b, Y2b = self.get_pt_position(pt2, 'px')
                 dragonax.append((X1b, Y1b))
                 dragonax.append((X2b, Y2b))
 
@@ -236,11 +186,9 @@ class Line(InteractiveObject):
 
             for coords in dragonax:
 
-                (Xb, Yb) = coords
-
+                Xb, Yb = coords
                 D1 = m.hypot(X1-Xb, Y1-Yb)
                 D2 = m.hypot(X2-Xb, Y2-Yb)
-
                 Dmin = min(D1, D2)
 
                 if Dmin < mindist:  # some of the points are too close
@@ -253,8 +201,8 @@ class Line(InteractiveObject):
             else:  # if the inner for loop finishes, it means all points are ok
                 break  # --> exit the outside for loop
   
-        [x1, y1] = pxtopos.transform((X1, Y1))  # back to data coordinates
-        [x2, y2] = pxtopos.transform((X2, Y2))
+        x1, y1 = self.pxtodata((X1, Y1))  # back to data coordinates
+        x2, y2 = self.pxtodata((X2, Y2))
 
         return x1, y1, x2, y2
 
@@ -288,7 +236,10 @@ class Line(InteractiveObject):
     
     
     def set_motion_tracking(self):
-        """set up dictionaries that store positions of elements during motion"""
+        """set up dictionaries that store positions of elements during motion.
+        
+        Here, it stores data coordinates to not have to avoid multiple conversions.
+        """
         x_inmotion = {}
         y_inmotion = {} 
         pts = self.all_artists[:2]
@@ -301,14 +252,15 @@ class Line(InteractiveObject):
     
     
     def set_press_info(self, event):
-        """Records information related to the mouse click."""
+        """Records information related to the mouse click, in px coordinates."""
         
         pt1, pt2 = self.all_artists[:2]
         
-        x = event.xdata
-        y = event.ydata  
-        x1, y1 = self.get_pt_position(pt1)
-        x2, y2 = self.get_pt_position(pt2)
+        x = event.x
+        y = event.y
+        
+        x1, y1 = self.get_pt_position(pt1, 'px')
+        x2, y2 = self.get_pt_position(pt2, 'px')
         
         x_press = {pt1: x1, pt2: x2, 'click': x}
         y_press = {pt1: y1, pt2: y2, 'click': y}
@@ -316,10 +268,11 @@ class Line(InteractiveObject):
         return x_press, y_press
     
 
-    def update_position(self, position):
+    def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
         
-        x, y = position
+        x = event.x  # for lines, it is preferrable to work with pixel coordinates
+        y = event.y  # (to acommodate log scales etc.)
         
         active_pts = self.active_info['active_pts']
         mode = self.active_info['mode']
@@ -327,20 +280,24 @@ class Line(InteractiveObject):
         # move just one point, the other one stays fixed
         if mode == 'edge':
             [pt] = active_pts  # should be the only pt in active_pts
-            self.x_inmotion[pt] = x
-            self.y_inmotion[pt] = y
+            x_data, y_data = self.pxtodata((x, y))
+            self.x_inmotion[pt] = x_data
+            self.y_inmotion[pt] = y_data
         
         # move the line as a whole in a parallel fashion
         elif mode == 'whole':
             # get where click was initially made
             x_press, y_press = self.press_info
 
-            dx = x - x_press['click']           # calculate motion
+            dx = x - x_press['click']
             dy = y - y_press['click']
             
             for pt in active_pts:
-                self.x_inmotion[pt] = x_press[pt] + dx
-                self.y_inmotion[pt] = y_press[pt] + dy
+                x_new = x_press[pt] + dx
+                y_new = y_press[pt] + dy
+                x_data, y_data = self.pxtodata((x_new, y_new))
+                self.x_inmotion[pt] = x_data
+                self.y_inmotion[pt] = y_data
 
         # now apply the changes to the graph
         for pt in active_pts:
@@ -353,10 +310,6 @@ class Line(InteractiveObject):
         
 
 # ============================ callback functions ============================
-
-# These callback functions are designed do be as general as possible for easy
-# subclassing. Class-specific behavior needs to be in the methods above.
-
     
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
@@ -374,15 +327,8 @@ class Line(InteractiveObject):
         """When mouse button is pressed, initiate motion."""
         if len(self.picked_artists) == 0:
             return
-        # if any component of the object is selected, it means it's moving
         else:
-            self.__class__.moving_objects.add(self)
-            self.moving = True
-            if self.__class__.blit:
-                for artist in self.all_artists:
-                    artist.set_animated(True)
-
-        self.initiate_motion(event)
+            self.initiate_motion(event)
         
 
     def on_motion(self, event):
@@ -400,19 +346,9 @@ class Line(InteractiveObject):
         if self not in self.__class__.moving_objects:
             return
         else:
-            if self.__class__.blit:
-                for artist in self.all_artists:
-                    artist.set_animated(False)
-                    
-        self.fig.canvas.draw()
-        self.reset_after_motion()
-
-
-    def on_leave_axes(self, event):
-        """If mouse leaves axes it is considered the same as unclicking"""
-        self.on_mouse_release(event)
+            self.reset_after_motion()
         
-
+    
     def on_close(self, event):
         "if figure is closed, remove line from the list of lines"
         self.delete()

@@ -7,8 +7,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import is_color_like
 
 
+def main():
+    obj = InteractiveObject()  # For testing purposes
+    return obj
+
+
 class InteractiveObject:
-    """Base class for moving objects on a figure. Used for subclassing.
+    """Base class for moving objects on a figure. Used for subclassing only.
     
     See CONTRIBUTING.md for information on how to use this class.
     """
@@ -82,6 +87,12 @@ class InteractiveObject:
             self.color = color
             if color not in self.__class__.colors:
                 self.__class__.colors.append(color)
+                
+        # Transforms functions to go from px to data coords.
+        # Need to be redefined if figure is resized
+        self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
+        self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates     
+        
 
         # this seems to be a generic way to bring window to the front but I
         # have not checked with all backends etc, and it does not always work
@@ -106,9 +117,6 @@ class InteractiveObject:
     def update_graph(self, event):
         """Update graph with the moving artists. Called only by the leader."""
         
-        x = event.xdata
-        y = event.ydata
-        
         canvas = self.fig.canvas
         ax = self.ax
 
@@ -126,7 +134,7 @@ class InteractiveObject:
         for obj in self.__class__.moving_objects:
             
             # update position data of object depending on its motion mode
-            obj.update_position((x, y))
+            obj.update_position(event)
             
             # Draw all artists of the object (if not, some can miss in motion)
             if self.__class__.blit:
@@ -158,6 +166,12 @@ class InteractiveObject:
             self.__class__.initiating_motion = True
             self.fig.canvas.draw()
             
+        self.__class__.moving_objects.add(self)
+        self.moving = True
+        if self.__class__.blit:
+            for artist in self.all_artists:
+                artist.set_animated(True)
+            
         # find which elements need to be active/updated during mouse motion
         self.active_info = self.set_active_info()
         # store location of pts and of click
@@ -166,10 +180,16 @@ class InteractiveObject:
     
     def reset_after_motion(self):
         """Reset attributes that should be active only during motion."""
+        
         self.picked_artists = set()
         self.active_info = {}
         self.press_info = {'currently_pressed': False}
         self.moving = False
+        
+        if self.__class__.blit:
+            for artist in self.all_artists:
+                artist.set_animated(False)
+        
         # Reset class variables that store moving information
         self.__class__.moving_objects.remove(self)
         if self is self.__class__.leader:
@@ -262,6 +282,24 @@ class InteractiveObject:
         for other in others:
             other.delete()
             
+            
+    def get_pt_position(self, pt, option='data'):
+        """Gets point position as a tuple from matplotlib line object.
+        
+        Options : 'data' (axis data coords, default) or 'px' (pixel coords).
+        """
+        xpt = pt.get_xdata()
+        ypt = pt.get_ydata()
+        # convert numpy array to scalar, faster than unpacking
+        pos = xpt.item(), ypt.item()
+        if option == 'data':
+            return pos
+        elif option == 'px':
+            pos_px = self.datatopx(pos)
+            return pos_px
+        else:
+            raise ValueError(f'{option} not a valid argument.')
+            
     
     @classmethod
     def class_objects(cls):
@@ -281,15 +319,6 @@ class InteractiveObject:
         objects = [obj for obj in cls.all_objects()]  # needed to avoid iterating over decreasing set
         for obj in objects:
             obj.delete()
-            
-    @staticmethod
-    def get_pt_position(pt):
-        "Gets point position as a tuple, from matplotlib line data"
-        xpt = pt.get_xdata()
-        ypt = pt.get_ydata()
-        x = xpt.item()  # convert numpy array to scalar, faster than unpacking
-        y = ypt.item()
-        return x, y
 
     
 # ================= connect/disconnect events and callbacks ==================
@@ -308,13 +337,21 @@ class InteractiveObject:
         #key events
         self.cidpressk = self.fig.canvas.mpl_connect('key_press_event',
                                                      self.on_key_press)
+        self.cidreleasek = self.fig.canvas.mpl_connect('key_release_event',
+                                                     self.on_key_release)
         # figure events
+        self.cidfigenter = self.fig.canvas.mpl_connect('figure_enter_event',
+                                                      self.on_enter_figure)
+        self.cidfigleave = self.fig.canvas.mpl_connect('figure_leave_event',
+                                                      self.on_leave_figure)
         self.cidaxenter = self.fig.canvas.mpl_connect('axes_enter_event',
                                                       self.on_enter_axes)
         self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event',
                                                       self.on_leave_axes)
         self.cidclose = self.fig.canvas.mpl_connect('close_event',
                                                     self.on_close)
+        self.cidresize = self.fig.canvas.mpl_connect('resize_event',
+                                                     self.on_resize)
 
     def disconnect(self):
         """disconnect callback ids"""    
@@ -325,20 +362,27 @@ class InteractiveObject:
         self.fig.canvas.mpl_disconnect(self.cidpick)
         # key events
         self.fig.canvas.mpl_disconnect(self.cidpressk)
+        self.fig.canvas.mpl_disconnect(self.cidreleasek)
         # figure events
+        self.fig.canvas.mpl_disconnect(self.cidfigenter)
+        self.fig.canvas.mpl_disconnect(self.cidfigleave)
         self.fig.canvas.mpl_disconnect(self.cidaxenter)
         self.fig.canvas.mpl_disconnect(self.cidaxleave)
         self.fig.canvas.mpl_disconnect(self.cidclose)
+        self.fig.canvas.mpl_disconnect(self.cidresize)
 
 
 # ============================ callback functions ============================
 
 # Need to be defined by the subclasses.
 
-    # mouse events 
+    # mouse events  ----------------------------------------------------------
     
     def on_mouse_press(self, event):
-        pass
+        print('Mouse Press')  # for testing
+        print(f'data coords: {event.xdata, event.ydata}')  # for testing
+        print(f'pixel coords: {event.x, event.y}')  # for testing
+        print(' ')  # for testing
     
     def on_mouse_release(self, event):
         pass
@@ -349,23 +393,41 @@ class InteractiveObject:
     def on_motion(self, event):
         pass
     
-    # key events
+    # key events  ------------------------------------------------------------
     
     def on_key_press(self, event):
-        #print(event.key)
+        print(f'Key Press: {event.key}')
+        pass
+    
+    def on_key_release(self, event):
         pass
 
-    # figure events
+    # figure events  ---------------------------------------------------------
+    
+    def on_enter_figure(self, event):
+        pass
+
+    def on_leave_figure(self, event):
+        pass
     
     def on_enter_axes(self, event):
         pass
 
     def on_leave_axes(self, event):
         pass
+    
+    def on_resize(self, event):
+        # Transforms functions to go from px to data coords.
+        # Need to be redefined if figure is resized
+        self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
+        self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates     
 
     def on_close(self, event):
         pass
     
+    
+if __name__ == '__main__':
+    main()
     
 
 

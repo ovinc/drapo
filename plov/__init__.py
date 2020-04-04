@@ -1,17 +1,21 @@
 """Additional Interactive Features for Matplotlib.
 
-*Cursor* is a class that creates a cursor that follows the mouse.
+Draggable shapes
+- Line is a class that creates a draggable line.
+- Rect is a class that creates a draggable rectangle.
 
-Based on the Cursor class are the following functions:
-- `ginput` the same as matplotlib's ginput, but with a cursor.
-- `hinput` is ginput (with cursor) but also with zooming/panning abilities.
+Cursor and ginput
+- Cursor is a class that creates a cursor that follows the mouse
+- ginput is a function based on Cursor that returns data from clicks/keystrokes.
 
-*Line* is a class that creates a draggable line.
+Other
+- ClickFig is a class that activates figures and axes (makes them the current 
+ones) by mouse hovering and clicking.
+
 """
 
 from .cursor import Cursor
 from .cursor import ginput
-from .cursor import hinput
 
 from .line import Line
 

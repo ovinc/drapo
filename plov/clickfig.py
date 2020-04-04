@@ -1,16 +1,21 @@
 """Module to be able to select active figure and axes by clicking on them."""
 
-# TODO -- add on_close where it disconnects only the closed figure ?
+# TODO -- add on_close behavior (e.g. disconnect, but only on the closed fig)
 # TODO -- similarly, disconnect when the last figure is closed ? I don't know if this is useful
 # TODO -- use key shortcuts to validate / cancel
 # TODO -- add function that returns the selected ax/fig (probably needs block)
 
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 
-def main():
-    """Examples of figures to navigate arouund"""
+# ================================= Testing ==================================
+
+def main(backend=None):
+    
+    if backend is not None:
+        matplotlib.use(backend)
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(211)
@@ -25,24 +30,18 @@ def main():
     ax3.plot(1, 1, '+r')
     
     plt.show(block=False)
+    
+    ClickFig()
+    
+    
+# ================================ Line class ================================
 
 
 class ClickFig:
     """Mouse that activates figures and axes by hovering and clicking.
     
     - Left Click on figure / axes to make them the current ones in Matplotlib.
-    - Right Click anywhere to deactivate the interactive mouse
-    
-    Use `ClickFig()` to make the interactive mouse active, and select active axes 
-    at will while still working on them. Use `ClickFig(highlight=False)` to not 
-    see background color change during hovering.
-    
-    For just one-time selection, use `ClickFig()`. The background colors
-    return to their original values once the ClickFig is deactivated (here, 
-    after one click).
-
-    To be able to select n times, use `ClickFig(n)`. Note that it is only the
-    last axes clicked that are activated.
+    - Right Click anywhere to deactivate the interactive mouse.
     
     Parameters
     ----------
@@ -100,7 +99,7 @@ class ClickFig:
     
     def erase(self):
         self.disconnect()
-        del self  #useful?
+        
         
 # ============================ callback functions ============================
 
@@ -169,6 +168,10 @@ class ClickFig:
                 print('\nClickFig deactivated (max number of clicks reached).')
             
             self.erase()
+                  
+    def on_close(self, event):
+        pass
+        # self.erase()
         
         
 # ================= connect/disconnect events and callbacks ==================
@@ -181,6 +184,7 @@ class ClickFig:
             self.enterax_id = fig.canvas.mpl_connect('axes_enter_event', self.on_ax_enter)
             self.leaveax_id = fig.canvas.mpl_connect('axes_leave_event', self.on_ax_leave)
             self.pressb_id = fig.canvas.mpl_connect('button_press_event', self.on_press)
+            self.close_id = fig.canvas.mpl_connect('close_event', self.on_close)
 
     def disconnect(self):
         """Disconnect mouse events from all figures"""
@@ -190,16 +194,16 @@ class ClickFig:
             fig.canvas.mpl_disconnect(self.enterax_id)
             fig.canvas.mpl_disconnect(self.leaveax_id)
             fig.canvas.mpl_disconnect(self.pressb_id)
+            fig.canvas.mpl_disconnect(self.close_id)
             
 
 # =========================== custom Figure Error ============================
         
 class FigureError(Exception):
+    """Raised when there are no existing figures."""
     pass
-
 
 # ================================ direct run ================================
 
 if __name__ == '__main__':
     main()
-

@@ -1,13 +1,15 @@
-""" Extensions to Matplotlib: Cursor class, and ginput/hinput functions.
+""" Extensions to Matplotlib: Cursor class, and ginput function.
 
 This module contains a Cursor class (cursor that moves with the mouse) and
-ginput/hinput functions similar to the matplotlib ginput, but with a cursor
-and allowing zooming/panning in the case of hinput.
+a ginput function similar to the matplotlib ginput, but with a cursor
+and allowing zooming/panning.
 """
 
 # TODO - To allow cursor to appear on multiple figures, it is necessary to
 # connect figure events to callbacks for every existing figure --> do a figure list
 # and connect one by one.
+
+# TODO -- add option to pick exact already drawn datapoints close to the click
 
 
 import matplotlib
@@ -17,13 +19,14 @@ import time
 
 from .interactive_object import InteractiveObject
 
-# ================================= example ==================================
+# ================================= Testing ==================================
 
 
-def main():
+def main(blit=True, backend=None):  # for testing purposes
     
-    matplotlib.use('Qt5Agg')  # blitting does not work well with tkagg ot macosx
-    
+    if backend is not None:
+        matplotlib.use(backend)
+        
     """ Example of use."""
     x = [0, 1, 2, 3, 4]
     y = [4, 7, 11, 18, 33]
@@ -34,10 +37,11 @@ def main():
     ax1.plot(x, y, '-ob')
     ax2.plot(z, '-ok')
 
-    # without the block=False option, the program does not go to hinput
+    # without the block=False option, the program does not go to ginput
     plt.show(block=False)
 
-    hinput(4)
+    data = ginput(5)
+    print(data)
 
    
 # =============================== Cursor class ===============================
@@ -46,30 +50,15 @@ def main():
 class Cursor(InteractiveObject):
     """Cursor following the mouse on any axes of a matplotlib figure.
 
-    This class creates a cursor that moves along with the mouse. It is drawn
-    only within existing axes, but contrary to the matplotlib widget Cursor,
-    is not bound to specific axes: moving the mouse over different axes will
-    plot the cursor in these other axes. Right now, the cursor is bound to a
-    certain figure, however this could be changed easily.
+    Interactive cursor appearance:
+    - space bar to toggle visibility (on/off)
+    - shift + up/down arrows: increase or decrease width (linewidth)
+    - shift + left/right arrows: cycle through different cursor colors
 
-    Cursor style can be modified with the options `color`, `linestyle` and 
-    `linewidth`, which correspond to matplotlib's parameters of the same name.
-    By default, color is red, linestyle is dotted (:), linewidth is 1.
-
-    Cursor apparance can also be changed by specific key strokes:
-        - space bar to toggle visibility (on/off)
-        - up/down arrows: increase or decrease width (linewidth)
-        - left/right arrows: cycle through different cursor colors
-
-    The cursor can also leave marks and/or record click positions if there is
-    a click with a specific button (by default, left mouse button). Clicks can
-    be removed with the remove button (by default, right mouse button), and
-    stopped with the stop button (by default, middle mouse button).
-
-    Addition / removal / stop of clicks are also achieved by key strokes:
-        - 'a' for addition (corresponds to left click)
-        - 'z' for removal (corresponds to right click)
-        - 'enter' for stopping clicks (corresponds to middle click)
+    Interactively extracting figure data:
+    - 'a' or left click to add point
+    - 'z' or right click to remove point
+    - 'enter' or middle click for stopping
 
     Parameters
     ----------
@@ -97,19 +86,13 @@ class Cursor(InteractiveObject):
     - `mark_symbol` (matplolib's symbol, default: '+')
     - `mark_size` (matplotlib's markersize, default: 10)
 
-
     Useful class methods
     --------------------
-
     - `erase_marks()`: erase click marks on the plot.
     - `erase_data()`: reset recorded click data.
 
-    The methods `create` and `delete` are used internally within the class and
-    are not meant for the user.
-
     Useful class attributes
     -----------------------
-
     - `fig`: matplotlib figure the cursor is active in. Fixed.
     - `ax`: matplotlib axes the cursor is active in. Changes in subplots.
     - `visible`: bool, sets whether cursor drawn or not when in axes.
@@ -117,30 +100,6 @@ class Cursor(InteractiveObject):
     - `clicknumber`: track the number of recorded clicks.
     - `clickdata`: stores the (x, y) data of clicks in a list.
     - `marks`: list of matplotlib artists containing all click marks drawn.
-
-    Notes
-    -----
-
-    - By default, the cursor is created on the active figure/axes. 
-    To instanciate a cursor in other figure/axes, either specify the key/ax
-    parameters, or use `ClickFig()` to activate these axes.
-    
-    - As in matplotlib's ginput, `mouse_add`, `mouse_pop` and `mouse_stop`
-    have keystroke equivalents, respectively `a`, `z` and `enter`. Only the
-    last one is the same as matplotlib's ginput, to avoid interactions with
-    other matplotlib's interactive features (e.g. backspace for "back").
-
-    - Currently, the mark color is always the same as the cursor.
-
-    - It is not allowed to have more than 1 cursor per figure, to avoid
-    conflics between cursors in blitting mode.
-
-    - Using panning and zooming works with the cursor on; to enable this,
-    blitting is temporarily suspended during a click+drag event.
-
-    - As a result, the cursor does not reappear immediately after panning or
-    zooming if blitting is activated, but one needs to move the mouse.
-
     """
     
     name = 'Cursor'
@@ -243,17 +202,17 @@ class Cursor(InteractiveObject):
         self.__class__.moving_objects.add(self)
 
 
-    def update_position(self, position):
+    def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
 
-        x, y = position  
-        ax = self.ax
+        x = event.xdata  # For cursors it is sufficient to work with data coordinates
+        y = event.ydata  # (no need to go to pixels as the cursor is always in axes)
         
         hline, vline = self.all_artists
     
         # accommodates changes in axes limits while cursor is on
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
       
         hline.set_xdata([xmin, xmax])
         hline.set_ydata([y, y])
@@ -376,8 +335,6 @@ class Cursor(InteractiveObject):
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
-            
-        
                 
 
     def on_key_press(self, event):
@@ -452,45 +409,30 @@ class Cursor(InteractiveObject):
         self.delete()
 
 
-# ========================== ginput-like functions ==========================
+# =========================== ginput-like function ==========================
 
 
-def ginput(*args, **kwargs):
-    """Identical to matplotlib's ginput, with added cursor for easier clicking.
-
-    Use of hinput is preferred, because it allows for zooming/panning.
-
-    Key shortcuts and mouse clicks follow matplotlib's behavior. The Cursor
-    class only acts on the cursor here (appearance, with key Cursor class
-    associated key shortcuts), not on the clicking and data recording which
-    follow matplotlib ginput. See matplotlib.pyplot.ginput for help.
-    """
-    c = Cursor(record_clicks=False, show_clicks=False, block=False)
-    data = plt.ginput(*args, **kwargs)
-    del c
-    return data
-
-
-def hinput(n=1, timeout=0, show_clicks=True,
+def ginput(n=1, timeout=0, show_clicks=True,
            mouse_add=1, mouse_pop=3, mouse_stop=2,
            blit=True):
-    """Similar to ginput, but zooming/panning does not add extra click data.
+    """Improved ginput function (graphical data input) compared to Matplotlib's.
+    
+    In particular, a cursor helps for precise clicking and zooming/panning 
+    do not add extra click data. 
 
-    Here, contrary to ginput, key shortcuts and mouse clicks follow the
-    plov Cursor class behavior, in particular the key shortcuts are
-    `a`, `z`, `enter` instead of any key, backspace and enter. See
-    Cursor class documentation for more info. All Cursor class interactive
-    features are usable.
+    Key shortcuts and mouse clicks follow the Cursor class behavior, 
+    in particular the key shortcuts are `a`, `z`, `enter` instead of 
+    any key, backspace and enter. See Cursor class documentation for more info.
+    All Cursor class interactive features are usable.
 
     Parameters
     ----------
-
-    Parameters are exactly the same as matplotlib.pyplot.ginput, with only an
-    additional one: blit (bool, default True): blitting for performance.
+    Parameters are exactly the same as matplotlib.pyplot.ginput, see
+    https://matplotlib.org/3.2.0/api/_as_gen/matplotlib.pyplot.ginput.html
+    with only an additional one: blit (bool, default True): see Cursor.
 
     Returns
     -------
-
     List of tuples corresponding to the list of clicked (x, y) coordinates.
 
     """
