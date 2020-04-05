@@ -24,4 +24,4 @@ from .rectangle import Rect
 from .clickfig import ClickFig
 
 
-__version__ = 1.0
+__version__ = 1.1

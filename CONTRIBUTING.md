@@ -28,7 +28,11 @@ The methods and attributes below are common to all subclasses through the base c
     
 - **update_graph(event)** manages the motion of objects in the figure and should only be called by the `cls.leader` object (defined in `initiate_motion`, see below); other objects are drawn with a loop on all `moving_objects`. In subclasses, `update_graph` is typically called in the `on_motion` callback. 
 
-- **initiate motion(event)** needs to be called before `update_graph` to define the leading object, define animated artists on the figure, and store other useful info for motion. In particular, it calls the `set_press_info` and `set_active_info` methods that need to be defined in the subclass. An exception is for cursors, which are always moving by default, and which deactivate during the motion of other objects (lines, rectangles, etc.). Cursor objects, as a result, are never defined as leaders. `initiate motion` needs to be called in the subclass by another method or callback (typically `on_pick` or `on_press`) that itself already defines which objects will be moving (by adding them to `moving_objects`).
+- **initiate motion(event)** needs to be called before `update_graph` to define the leading object, define animated artists on the figure, and store other useful info for motion. In particular, it calls the `set_active_info` method that needs to be defined in the subclass, as well as the `set_press_info` and `set_motion_tracking` methods which are defined in the base class. An exception is for cursors, which are always moving by default, and which deactivate during the motion of other objects (lines, rectangles, etc.). Cursor objects, as a result, are never defined as leaders. `initiate motion` needs to be called in the subclass by another method or callback (typically `on_pick` or `on_press`) that itself already defines which objects will be moving (by adding them to `moving_objects`).
+
+- **set_motion_tracking()**: generate dictionaries `x_inmotion` and `y_inmotion`that store positions of tracked points during motion. For it to work, the attribute `all_pts` needs to be defined by the subclass `create` method.
+
+- **set_press_info(event)**: generate information about a click event, e. g. its position and the position the object relative to it, stored in the dictionary `self.press_info`.
 
 - **reset_after_motion()** basically reverses `initiate_motion` and other parameters.
 
@@ -67,13 +71,11 @@ The methods and attributes below are common to all subclasses through the base c
 
 The methods below are present in the base class but are (mostly) empty. They need to be redefined in each subclass to fit the needs of that specific class.
 
-- **create()**: create the object. The minimal thing it needs to do is define the `all_artists` attribute, which is a list of all Matplotlib artists the object is made of. Apart from this, its structure (number of arguments etc.) can be adapted for the needs of every subclass.
+- **create()**: create the object. The minimal thing it needs to do is define the `all_artists` attribute, which is a list of all Matplotlib artists the object is made of, and `all_pts` which is a list of the points that need to be tracked during motion (typically, all points composing the object). Apart from this, its structure (number of arguments etc.) can be adapted for the needs of every subclass.
 
 - **update_position(event)** is called by `update_graph` to define how object of every specific class needs to be updated following the position of the mouse (mouse event `event`).
 
 - **set_active_info**: generate information about the active object, e. g. its mode of motion and which parts of it need to be updated during motion, stored (either directly in the method or as a return of the method) in the dictionary `self.active_info`.
-
-- **set_press_info**: generate information about the click, e. g. its position and the position the object relative to it, stored (either directly in the method or as a return of the method) in the dictionary `self.press_info`.
 
 ### Callbacks
 
@@ -86,9 +88,10 @@ To summarize the information above, subclasses need to do the following things:
 - define local `cls.name`,
 - *do not* define local `cls.all_interactive_objects`, `cls.moving_objects`, `cls.leader`, `cls.initiating_motion`, `cls.blit`, `cls.background` so that when these values are called or updated, they are shared with the parent and sibling classes,
 - *do not* append instance to global `cls.all_interactive_objects` (taken care of by the base class),
-- redefine locally the `self.create`, `self.update_position`, `self.set_active_info`, `self.set_press_info` methods,
+- redefine locally the `self.create`, `self.update_position`, `self.set_active_info` methods,
+- make sure `self.create` defines `all_artists` and `all_pts`,
 - define locally the callback functions and make them call the class methods,
-- make sure to keep `postodata` and `datatopos` definitions in `on_resize`,
+- make sure to keep `postodata` and `datatopos` definitions in the `on_resize` callback,
 - call `self.initiate_motion` (global) to define leader or check existing leader before motion,
 - call `self.update_graph` (global) to create animation during motion or to trigger object update; for motion, make sure that only the leading object calls the method,
 - call `self.reset_after_motion` after motion is done to reset things like leader, background, moving_objects and other info.

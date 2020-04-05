@@ -221,9 +221,8 @@ class Cursor(InteractiveObject):
         
         
     def set_press_info(self, event):
-        press_info = {'currently_pressed': True, 
+        self.press_info = {'currently_pressed': True, 
                       'click_position': (event.xdata, event.ydata)}
-        return press_info
 
 
     def erase_marks(self):
@@ -290,14 +289,14 @@ class Cursor(InteractiveObject):
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
-        # nothing if pressed to avoid weird interactions with panning
+        # do nothing if pressed to avoid weird interactions with panning
         if self.visible and self.inaxes and not self.press_info['currently_pressed']:
             self.update_graph(event)
         
 
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
-        self.press_info = self.set_press_info(event)
+        self.set_press_info(event)
         if self.visible and self.inaxes:
              self.erase()
         
@@ -306,8 +305,7 @@ class Cursor(InteractiveObject):
         """When releasing click, reactivate cursor and redraw figure.
 
         This is in order to accommodate potential zooming/panning.
-        """
-        
+        """  
         self.press_info['currently_pressed'] = False
         if self.visible and self.inaxes:
             self.create(event)
@@ -318,7 +316,6 @@ class Cursor(InteractiveObject):
         # surprising is that if I shortcut on_motion by calling update_graph
         # directly here, it does not work.
         self.__class__.initiating_motion = True  # to reactivate cursor
-
 
         # See if click needs to be recorded.        
 
@@ -401,12 +398,11 @@ class Cursor(InteractiveObject):
         if self.clicknumber == self.n or event.key == 'enter':
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
-
-
-
-    def on_close(self, event):
-        """Delete cursor if figure is closed"""
-        self.delete()
+            
+            
+    def on_pick(self, event):
+        """Contrary to draggble objects, no self-picking here."""
+        pass
 
 
 # =========================== ginput-like function ==========================

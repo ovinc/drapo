@@ -62,6 +62,8 @@ class InteractiveObject:
         self.all_interactive_objects.append(self)
                 
         self.all_artists = [] # all artists the object is made of
+        self.all_pts = []  # all individual tracking points the object is made of
+        
         # set that stores info about what artists are picked
         self.picked_artists = set() # they can be different frmo the active
         # artists, because e.g. when a line moves as a whole, only the line
@@ -173,9 +175,16 @@ class InteractiveObject:
                 artist.set_animated(True)
             
         # find which elements need to be active/updated during mouse motion
-        self.active_info = self.set_active_info()
+        self.set_active_info()
         # store location of pts and of click
-        self.press_info = self.set_press_info(event)
+        self.set_press_info(event)
+        # set up dictionaries that store positions of elements during motion
+        self.set_motion_tracking()
+        
+        # Transforms functions to go from px to data coords.
+        # Need to be redefined if figure is resized or if zooming occurs
+        self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
+        self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates 
             
     
     def reset_after_motion(self):
@@ -210,10 +219,37 @@ class InteractiveObject:
         active_info = {}
         return active_info
     
-    def set_press_info(self):
-        """Store information related to mouse click. Defined in subclasses."""
-        press_info = {}
-        return press_info
+    
+    def set_press_info(self, event):
+        """Records information related to the mouse click, in px coordinates."""
+
+        x = event.x
+        y = event.y
+       
+        x_press = {'click': x}
+        y_press = {'click': y}
+        
+        for pt in self.all_pts:
+            xpt, ypt = self.get_pt_position(pt, 'px')
+            x_press[pt] = xpt
+            y_press[pt] = ypt
+        
+        self.press_info = x_press, y_press
+        
+    
+    def set_motion_tracking(self):
+        """set up dictionaries that store positions of elements during motion.
+        
+        Here, it stores data coordinates to not have to avoid multiple conversions.
+        """
+        x_inmotion = {}
+        y_inmotion = {} 
+        for pt in self.all_pts:
+            xpt, ypt = self.get_pt_position(pt, 'data')
+            x_inmotion[pt] =  xpt
+            y_inmotion[pt] =  ypt
+        self.x_inmotion = x_inmotion
+        self.y_inmotion = y_inmotion
     
     
     def create(self):
@@ -288,8 +324,8 @@ class InteractiveObject:
         
         Options : 'data' (axis data coords, default) or 'px' (pixel coords).
         """
-        xpt = pt.get_xdata()
-        ypt = pt.get_ydata()
+        # if orig=True (default), the format is not always consistent
+        xpt, ypt = pt.get_data(orig=False)  
         # convert numpy array to scalar, faster than unpacking
         pos = xpt.item(), ypt.item()
         if option == 'data':
@@ -385,7 +421,10 @@ class InteractiveObject:
         print(' ')  # for testing
     
     def on_mouse_release(self, event):
-        pass
+        # Transforms functions to go from px to data coords.
+        # Need to be redefined if figure is resized or if zooming occurs
+        self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
+        self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates  
     
     def on_pick(self, event):
         pass
@@ -417,13 +456,16 @@ class InteractiveObject:
         pass
     
     def on_resize(self, event):
+        """When resizing, re-adjust the conversion from pixels to data pts."""
         # Transforms functions to go from px to data coords.
-        # Need to be redefined if figure is resized
+        # Need to be redefined if figure is resized or if zooming occurs
         self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
         self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates     
 
     def on_close(self, event):
-        pass
+        """Delete object if figure is closed"""
+        self.delete()
+
     
     
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 """Extensions to Matplotlib: Line class (draggable line)"""
 
-# TODO: -- add double click to "freeze" line to avoid moving it by mistake later?
+# TODO -- add blocking behavior to be able to measure slopes etc.
+# TODO -- add double click to "freeze" line to avoid moving it by mistake later?
 # TODO -- add keystroke controls (e.g. to delete the line)?
 # TODO -- key press to make the line exactly vertical or horiztontal
 # TODO -- live indication of the slope of the line.
@@ -55,7 +56,7 @@ def main(blit=True, backend=None):  # For testing purposes
 class Line(InteractiveObject):
     """Interactive draggable line on matplotlib figure/axes.
     
-    Left click to drag the line, right click to remove it.
+    Left click anywhere on the line to drag it, right click to remove it.
 
     Parameters
     ----------
@@ -67,11 +68,11 @@ class Line(InteractiveObject):
     - 'pickersize' (float, default: 5), tolerance for line picking.
     - `color` (matplotlib's color, default: None (class default value)).
 
-    Appearance of the edge points (pt1, pt2):
+    Appearance of the edge points:
     - `ptstyle` (matplotlib's marker, default: dot '.').
     - `ptsize` (float, default: 5). Marker size.
 
-    Appearance of the connecting line (link):
+    Appearance of the connecting line:
     - `linestyle` (matplotlib's linestyle, default: continuous '-').
     - `linewidth` (float, default: 1). Line width.
     
@@ -79,19 +80,24 @@ class Line(InteractiveObject):
     - `avoid_existing` (bool, default:True). Avoid overlapping existing lines
     (only avoids that edge points overlap, but lines can still cross).
     
+    Other
+    - `blit` (bool, default True). If True, blitting is used for fast rendering
+    - `block`(bool, default False). If True, object blocks the console
+    (block not implemented yet for Line and Rect)
     """
     
     name = 'Draggable Line'
     
 
-    def __init__(self, pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True,
+    def __init__(self, pos=(.2, .2, .8, .8), fig=None, ax=None,
                  pickersize=5, color=None,
                  ptstyle='.', ptsize=5,
                  linestyle='-', linewidth=1,
-                 avoid_existing = True
+                 avoid_existing = True,
+                 blit=True, block=False
                  ):
         
-        super().__init__(fig, ax, color, blit)    
+        super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
 
         options = (pos, pickersize, self.color, ptstyle, ptsize, 
                    linestyle, linewidth, avoid_existing)
@@ -104,7 +110,6 @@ class Line(InteractiveObject):
         self.ax.set_ylim(self.ylim)
         
         self.fig.canvas.draw()
-        #plt.show()
 
 
 # ============================ main line methods =============================
@@ -144,12 +149,11 @@ class Line(InteractiveObject):
 
         # assemble lines and pts into "all" ----------------------------------
         self.all_artists = pt1, pt2, link
+        self.all_pts = pt1, pt2
         
 
     def set_initial_position(self, position, pickersize, avoid=True):
         """Set position of new line, avoiding existing lines if necessary."""
-        
-        ax = self.ax
         
         xmin, xmax = self.xlim
         ymin, ymax = self.ylim
@@ -174,9 +178,9 @@ class Line(InteractiveObject):
         for line in otherlines:
 
             # if on same axis, record coords in a list to check overlap later
-            if line.ax is ax:
+            if line.ax is self.ax:
                 
-                pt1, pt2 = line.all_artists[:2]
+                pt1, pt2 = line.all_pts
                 X1b, Y1b = self.get_pt_position(pt1, 'px')
                 X2b, Y2b = self.get_pt_position(pt2, 'px')
                 dragonax.append((X1b, Y1b))
@@ -228,44 +232,7 @@ class Line(InteractiveObject):
         
         active_pts = set(active_elements) - {line}
         
-        # initiate dictionaries storing position of pts duting motion --------
-        # TODO -- improve the logics of how all this is defined.
-        self.set_motion_tracking()
-        
-        return {'active_pts': active_pts, 'mode': mode}
-    
-    
-    def set_motion_tracking(self):
-        """set up dictionaries that store positions of elements during motion.
-        
-        Here, it stores data coordinates to not have to avoid multiple conversions.
-        """
-        x_inmotion = {}
-        y_inmotion = {} 
-        pts = self.all_artists[:2]
-        for pt in pts:
-            xpt, ypt = self.get_pt_position(pt)
-            x_inmotion[pt] =  xpt
-            y_inmotion[pt] =  ypt
-        self.x_inmotion = x_inmotion
-        self.y_inmotion = y_inmotion
-    
-    
-    def set_press_info(self, event):
-        """Records information related to the mouse click, in px coordinates."""
-        
-        pt1, pt2 = self.all_artists[:2]
-        
-        x = event.x
-        y = event.y
-        
-        x1, y1 = self.get_pt_position(pt1, 'px')
-        x2, y2 = self.get_pt_position(pt2, 'px')
-        
-        x_press = {pt1: x1, pt2: x2, 'click': x}
-        y_press = {pt1: y1, pt2: y2, 'click': y}
-        
-        return x_press, y_press
+        self.active_info = {'active_pts': active_pts, 'mode': mode}
     
 
     def update_position(self, event):
@@ -286,9 +253,8 @@ class Line(InteractiveObject):
         
         # move the line as a whole in a parallel fashion
         elif mode == 'whole':
-            # get where click was initially made
+            # get where click was initially made and calculate motion
             x_press, y_press = self.press_info
-
             dx = x - x_press['click']
             dy = y - y_press['click']
             
@@ -314,11 +280,9 @@ class Line(InteractiveObject):
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
         selected = event.artist
-        # right click anywhere on the line, including ends, and it removes it.
         if event.mouseevent.button == 3 and (selected in self.all_artists):
             self.delete()
             return
-
         if selected in self.all_artists:
             self.picked_artists.add(selected)
             
@@ -342,16 +306,16 @@ class Line(InteractiveObject):
 
     def on_mouse_release(self, event):
         """When mouse released, reset attributes to non-moving"""
-        
         if self not in self.__class__.moving_objects:
             return
         else:
             self.reset_after_motion()
+            
+            
+    def on_key_press(self, event):
+        pass
         
-    
-    def on_close(self, event):
-        "if figure is closed, remove line from the list of lines"
-        self.delete()
+
 
 
 # ================================ direct run ================================
