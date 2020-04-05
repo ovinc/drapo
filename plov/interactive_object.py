@@ -175,12 +175,12 @@ class InteractiveObject:
                 artist.set_animated(True)
             
         # find which elements need to be active/updated during mouse motion
+        # and motion mode (defined in subclasses)
         self.set_active_info()
-        # store location of pts and of click
+        # store location of pts and of click, and create dict of px pos data for motion
+        # (defines self.press_info and self.moving_positions)
         self.set_press_info(event)
-        # set up dictionaries that store positions of elements during motion
-        self.set_motion_tracking()
-        
+   
         # Transforms functions to go from px to data coords.
         # Need to be redefined if figure is resized or if zooming occurs
         self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
@@ -193,6 +193,7 @@ class InteractiveObject:
         self.picked_artists = set()
         self.active_info = {}
         self.press_info = {'currently_pressed': False}
+        self.moving_positions = {}
         self.moving = False
         
         if self.__class__.blit:
@@ -204,57 +205,20 @@ class InteractiveObject:
         if self is self.__class__.leader:
             self.__class__.leader = None
 
-
-    def update_position(self, position):
-        """Update object position depending on moving mode and mouse position.
-        
-        Here it does not do much, but the method needs to be rewritten in
-        subclassing to be useful. It is used by update_graph().
-        """
-        x, y = position
-        
-    
-    def set_active_info(self):
-        """Store information useful when in motion. Defined in subclasses."""
-        active_info = {}
-        return active_info
-    
     
     def set_press_info(self, event):
         """Records information related to the mouse click, in px coordinates."""
-
-        x = event.x
-        y = event.y
-       
-        x_press = {'click': x}
-        y_press = {'click': y}
+        
+        press_info = {'click': (event.x, event.y)}  # record click position
+        moving_positions = {}
         
         for pt in self.all_pts:
             xpt, ypt = self.get_pt_position(pt, 'px')
-            x_press[pt] = xpt
-            y_press[pt] = ypt
-        
-        self.press_info = x_press, y_press
-        
-    
-    def set_motion_tracking(self):
-        """set up dictionaries that store positions of elements during motion.
-        
-        Here, it stores data coordinates to not have to avoid multiple conversions.
-        """
-        x_inmotion = {}
-        y_inmotion = {} 
-        for pt in self.all_pts:
-            xpt, ypt = self.get_pt_position(pt, 'data')
-            x_inmotion[pt] =  xpt
-            y_inmotion[pt] =  ypt
-        self.x_inmotion = x_inmotion
-        self.y_inmotion = y_inmotion
-    
-    
-    def create(self):
-        """Create object based on options. Need to be defined in subclass."""
-        pass
+            press_info[pt] = xpt, ypt # position of all object pts during click
+            moving_positions[pt] =  xpt, ypt # will be updated during motion
+            
+        self.press_info = press_info
+        self.moving_positions = moving_positions
     
     
     def eraser(self, option):
@@ -355,8 +319,28 @@ class InteractiveObject:
         objects = [obj for obj in cls.all_objects()]  # needed to avoid iterating over decreasing set
         for obj in objects:
             obj.delete()
-
+            
+            
+# TO DEFINE IN SUBCLASSES ====================================================
+            
+          
+    def create(self):
+        """Create object based on options. Need to be defined in subclass."""
+        pass  
     
+    def set_active_info(self):
+        """Store information useful when in motion. Defined in subclasses."""
+        active_info = {}
+        return active_info
+          
+    def update_position(self, event):
+        """Update object position depending on moving mode and mouse position.
+        
+        Used by update_graph.
+        """
+        pass
+        
+
 # ================= connect/disconnect events and callbacks ==================
 
     def connect(self):
@@ -410,27 +394,39 @@ class InteractiveObject:
 
 # ============================ callback functions ============================
 
-# Need to be defined by the subclasses.
-
     # mouse events  ----------------------------------------------------------
+        
+    def on_pick(self, event):
+        """If picked, save picked objects, or delete objects if right click"""
+        selected = event.artist
+        if event.mouseevent.button == 3 and (selected in self.all_artists):
+            self.delete()
+            return
+        if selected in self.all_artists:
+            self.picked_artists.add(selected)
     
     def on_mouse_press(self, event):
-        print('Mouse Press')  # for testing
-        print(f'data coords: {event.xdata, event.ydata}')  # for testing
-        print(f'pixel coords: {event.x, event.y}')  # for testing
-        print(' ')  # for testing
+        """When mouse button is pressed, initiate motion."""
+        if len(self.picked_artists) == 0:
+            return
+        else:
+            self.initiate_motion(event)
     
-    def on_mouse_release(self, event):
-        # Transforms functions to go from px to data coords.
-        # Need to be redefined if figure is resized or if zooming occurs
-        self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
-        self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates  
-    
-    def on_pick(self, event):
-        pass
- 
     def on_motion(self, event):
-        pass
+        """Leader artist triggers graph update based on mouse position"""
+        if not self.moving:
+            return
+        # only the leader triggers moving events (others drawn in update_graph)
+        if self.__class__.leader is self:
+            self.update_graph(event)
+            
+    def on_mouse_release(self, event):
+        """When mouse released, reset attributes to non-moving"""
+        if self not in self.__class__.moving_objects:
+            return
+        else:
+            self.reset_after_motion()
+    
     
     # key events  ------------------------------------------------------------
     

@@ -54,7 +54,7 @@ def main(blit=True, backend=None):  # For testing purposes
 
 
 class Line(InteractiveObject):
-    """Interactive draggable line on matplotlib figure/axes.
+    """Interactive draggable line in matplotlib figure/axes.
     
     Left click anywhere on the line to drag it, right click to remove it.
 
@@ -89,20 +89,15 @@ class Line(InteractiveObject):
     name = 'Draggable Line'
     
 
-    def __init__(self, pos=(.2, .2, .8, .8), fig=None, ax=None,
-                 pickersize=5, color=None,
-                 ptstyle='.', ptsize=5,
-                 linestyle='-', linewidth=1,
-                 avoid_existing = True,
-                 blit=True, block=False
-                 ):
+    def __init__(self, fig=None, ax=None, pickersize=5, color=None,
+                 ptstyle='.', ptsize=5,linestyle='-', linewidth=1,
+                 avoid_existing = True, blit=True, block=False):
         
         super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
 
-        options = (pos, pickersize, self.color, ptstyle, ptsize, 
-                   linestyle, linewidth, avoid_existing)
         # create line, and attributes pt1, pt2, link
-        self.create(options)
+        self.create(pickersize, self.color, ptstyle, ptsize, 
+                   linestyle, linewidth, avoid_existing)
 
         # to prevent any shift in axes limits when instanciating line. The
         # initial self.xlim / self.ylim setting is done in InteractiveObject
@@ -111,35 +106,26 @@ class Line(InteractiveObject):
         
         self.fig.canvas.draw()
 
-
 # ============================ main line methods =============================
 
 # these methods are specific to the Line class and are called by the more
 # generic callback functions (see below)
 
-    def create(self, options):
+    def create(self, pickersize, color, ptstyle, ptsize, linestyle, 
+               linewidth, avoid_existing):
         """Create the line and its components (pt1, pt2, link)"""
-        
-        # If the structure below is changed, verify that subclasses are
-        # changed as well
-        (pos, pickersize, color, ptstyle, ptsize, 
-         linestyle, linewidth, avoid_existing) = options
-        
-        # set position of line on screen so that it does not overlap others
-        pos = self.__class__.set_initial_position(self, pos, pickersize, 
-                                                  avoid_existing)
-        x1, y1, x2, y2 = pos
+   
+        # set position of line on screen so that it does not overlap others --
+        pos = self.__class__.set_initial_position(self, pickersize, avoid_existing)
+        (x1, y1), (x2, y2) = pos
 
         # create edge points -------------------------------------------------
-
         pt1, = self.ax.plot(x1, y1, marker=ptstyle, color=color,
                             markersize=ptsize, picker=ptsize)
         pt2, = self.ax.plot(x2, y2, marker=ptstyle, color=color,
                             markersize=ptsize, picker=ptsize)
 
-
         # create connecting line (link) ---------------------------------------
-
         x1, y1 = self.get_pt_position(pt1, 'data')
         x2, y2 = self.get_pt_position(pt2, 'data')
 
@@ -152,63 +138,49 @@ class Line(InteractiveObject):
         self.all_pts = pt1, pt2
         
 
-    def set_initial_position(self, position, pickersize, avoid=True):
+    def set_initial_position(self, pickersize, avoid=True):
         """Set position of new line, avoiding existing lines if necessary."""
+        
+        a1, b1, a2, b2 = .2, .2, .8, .8  # relative initial position in axes
         
         xmin, xmax = self.xlim
         ymin, ymax = self.ylim
-
-        (a1, b1, a2, b2) = position
+        # Move into px coordinates to avoid problems with nonlinear axes
+        xmin, ymin = self.datatopx((xmin, ymin))
+        xmax, ymax = self.datatopx((xmax, ymax))
 
         x1, y1 = (1-a1)*xmin + a1*xmax, (1-b1)*ymin + b1*ymax  # default pos.
         x2, y2 = (1-a2)*xmin + a2*xmax, (1-b2)*ymin + b2*ymax
         
-        if not avoid:
-            return x1, y1, x2, y2
-                    
-        mindist = 3*pickersize  # min distance between pts to avoid overlapping
-        maxloop = 1e3  # maximum number of loops to try to place the new line
-
-        X1, Y1 = self.datatopx((x1, y1))
-        X2, Y2 = self.datatopx((x2, y2))
-
-        dragonax = []  # list of coords (px) of existing lines in the current axes
-
-        otherlines = set(self.class_objects()) - set([self])
-        for line in otherlines:
-
-            # if on same axis, record coords in a list to check overlap later
-            if line.ax is self.ax:
-                
-                pt1, pt2 = line.all_pts
-                X1b, Y1b = self.get_pt_position(pt1, 'px')
-                X2b, Y2b = self.get_pt_position(pt2, 'px')
-                dragonax.append((X1b, Y1b))
-                dragonax.append((X2b, Y2b))
-
-        for i in range(int(maxloop)):
-
-            for coords in dragonax:
-
-                Xb, Yb = coords
-                D1 = m.hypot(X1-Xb, Y1-Yb)
-                D2 = m.hypot(X2-Xb, Y2-Yb)
-                Dmin = min(D1, D2)
-
-                if Dmin < mindist:  # some of the points are too close
-                    X1 += -mindist  # shift everything in a parallel manner
-                    Y1 += +mindist
-                    X2 += -mindist
-                    Y2 += +mindist
-                    break
-
-            else:  # if the inner for loop finishes, it means all points are ok
-                break  # --> exit the outside for loop
-  
-        x1, y1 = self.pxtodata((X1, Y1))  # back to data coordinates
-        x2, y2 = self.pxtodata((X2, Y2))
-
-        return x1, y1, x2, y2
+        if avoid:
+            mindist = 3*pickersize  # min distance between pts to avoid overlapping       
+            dragonax = []  # list of coords (px) of existing lines in the current axes
+    
+            otherlines = set(self.class_objects()) - set([self])
+            for line in otherlines:
+                # if on same axis, record coords in a list to check overlap later
+                if line.ax is self.ax:  
+                    pt1, pt2 = line.all_pts
+                    x1b, y1b = self.get_pt_position(pt1, 'px')
+                    x2b, y2b = self.get_pt_position(pt2, 'px')
+                    dragonax.append((x1b, y1b))
+                    dragonax.append((x2b, y2b))
+    
+            while True:
+                for (xb, yb) in dragonax:
+                    d1 = m.hypot(x1-xb, y1-yb)
+                    d2 = m.hypot(x2-xb, y2-yb)
+                    dmin = min(d1, d2)
+                    if dmin < mindist:  # some of the points are too close
+                        x1 += -mindist  # shift everything in a parallel manner
+                        y1 += +mindist
+                        x2 += -mindist
+                        y2 += +mindist
+                        break
+                else:  # if the inner for loop finishes, it means all points are ok
+                    break  # --> exit the outside while loop
+      
+        return self.pxtodata((x1, y1)), self.pxtodata((x2, y2))
 
 
     def set_active_info(self):
@@ -238,8 +210,7 @@ class Line(InteractiveObject):
     def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
         
-        x = event.x  # for lines, it is preferrable to work with pixel coordinates
-        y = event.y  # (to acommodate log scales etc.)
+        x, y = event.x, event.y  # pixel coordinates
         
         active_pts = self.active_info['active_pts']
         mode = self.active_info['mode']
@@ -247,77 +218,34 @@ class Line(InteractiveObject):
         # move just one point, the other one stays fixed
         if mode == 'edge':
             [pt] = active_pts  # should be the only pt in active_pts
-            x_data, y_data = self.pxtodata((x, y))
-            self.x_inmotion[pt] = x_data
-            self.y_inmotion[pt] = y_data
+            self.moving_positions[pt] = x, y
         
         # move the line as a whole in a parallel fashion
         elif mode == 'whole':
             # get where click was initially made and calculate motion
-            x_press, y_press = self.press_info
-            dx = x - x_press['click']
-            dy = y - y_press['click']
+            x0, y0 = self.press_info['click']
+            dx, dy = x - x0, y - y0
             
             for pt in active_pts:
-                x_new = x_press[pt] + dx
-                y_new = y_press[pt] + dy
-                x_data, y_data = self.pxtodata((x_new, y_new))
-                self.x_inmotion[pt] = x_data
-                self.y_inmotion[pt] = y_data
+                x0_pt, y0_pt = self.press_info[pt]
+                self.moving_positions[pt] = x0_pt + dx, y0_pt + dy 
 
         # now apply the changes to the graph
         for pt in active_pts:
-            pt.set_xdata(self.x_inmotion[pt])
-            pt.set_ydata(self.y_inmotion[pt])
+            xnew, ynew = self.pxtodata(self.moving_positions[pt])
+            pt.set_data(xnew, ynew)
         
         pt1, pt2, link = self.all_artists
-        link.set_xdata([self.x_inmotion[pt1], self.x_inmotion[pt2]])
-        link.set_ydata([self.y_inmotion[pt1], self.y_inmotion[pt2]])
+        x1, y1 = self.pxtodata(self.moving_positions[pt1])
+        x2, y2 = self.pxtodata(self.moving_positions[pt2])
+        link.set_data([x1, x2], [y1, y2])
         
 
 # ============================ callback functions ============================
-    
-    def on_pick(self, event):
-        """If picked, save picked objects, or delete objects if right click"""
-        selected = event.artist
-        if event.mouseevent.button == 3 and (selected in self.all_artists):
-            self.delete()
-            return
-        if selected in self.all_artists:
-            self.picked_artists.add(selected)
-            
-
-    def on_mouse_press(self, event):
-        """When mouse button is pressed, initiate motion."""
-        if len(self.picked_artists) == 0:
-            return
-        else:
-            self.initiate_motion(event)
-        
-
-    def on_motion(self, event):
-        """Leader artist triggers graph update based on mouse position"""
-        if not self.moving:
-            return
-        # only the leader triggers moving events (others drawn in update_graph)
-        if self.__class__.leader is self:
-            self.update_graph(event)
-
-
-    def on_mouse_release(self, event):
-        """When mouse released, reset attributes to non-moving"""
-        if self not in self.__class__.moving_objects:
-            return
-        else:
-            self.reset_after_motion()
-            
             
     def on_key_press(self, event):
         pass
         
-
-
-
 # ================================ direct run ================================
 
 if __name__ == '__main__':

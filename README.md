@@ -46,14 +46,14 @@ from plov import Line, Cursor, Rect, ClickFig, ginput
 
 `Line()` creates a line in the current axes of the current figure (creates new figure if none existing) that is draggable by left-clicking on it. Motion is different whether click is done on the line ends or on the line itself. To remove the line, right-click on it.
 
-`Rect()` creates a draggable rectangle (*not available yet*)
+`Rect()` creates a draggable rectangle in the current or specified figure. Motion is triggered by left-clicking on the edges (lines), vertices (corner points), or in the center (marked by a cross). Right-click to delete.
 
 See documentation for options to change the appearance of these objects.
 See ClickFig below to activate axes interactively to be able to create the objects in specific axes as needed.
 
 ### Cursor and ginput (extract data from mouse position)
 
-`Cursor()` creates a cursor in the current figure, but contrary to the draggable objects, the cursor is not bound to specific axes. It will appear on whatever axes the mouse is currently on, and will switch axes if the mouse goes over other axes. No cursor is visible if the mouse is not currently on axes. 
+`Cursor()` creates a cursor in the current figure, but contrary to the draggable objects, the cursor is not bound to specific axes. It is however bound to a figure, and will appear on whatever axes the mouse is currently on; it will switch axes if the mouse goes over other axes. No cursor is visible if the mouse is not currently on axes. 
 - Use <kbd>⇧ Shift</kbd> + left/right arrow keys to change color. 
 - Use <kbd>⇧ Shift</kbd> + up/down keys to change thickness.
 - Use the <kbd>space</kbd> bar to toggle visibility on/off.

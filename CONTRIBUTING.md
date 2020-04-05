@@ -1,23 +1,20 @@
 # Development information for Plot-OV (plov)
 
+All Plot-OV (plov) classes except ClickFig (not described here) use a **base class** named **InteractiveObject** located in the file *interactive_object.py*. The base class is mainly developed for objects that are set in motion when they are selected (picked) by a click, and moved by dragging the object while keeping the mouse pressed, like the **Line** and **Rect** classes. These classes, as a result, use most of the base class methods with little modification. The **Cursor** class has a behavior slightly different where the object moves spontaneously with the mouse without a click. As a result, it has to redefine more of the base class methods. The base class allows for all those objects to be managed in the same framework and thus enables dragging of several objects (possibly of different types) at the same time, and efficient rendering of the motion of these objects through a globally set blitting mode.
 
-All Plot-OV (plov) classes use a **base class** named **InteractiveObject** located in the file *interactive_object.py*. The only exception is **ClickFig**, which works differently and is on its own and will not be described here.
+important to keep 
 
 ## General structure
 
-- Events on a Matplotlib figure (click, mouse motion, key press, enter axes, etc.) are tied to *callback functions* through Matplotlib's event handling manager (see https://matplotlib.org/users/event_handling.html). The base class manages these events with the `connect()` and `disconnect()` methods. Event data is passed to callbacks with the `event` parameter.
+- Events on a Matplotlib figure (click, mouse motion, key press, enter axes, etc.) are tied to *callback functions* through Matplotlib's event handling manager (see https://matplotlib.org/users/event_handling.html). The base class manages these events with the `connect()` and `disconnect()` methods.
 
-- Callback functions (`on_mouse_press`, `on_motion`, etc.) are defined, but mostly empty in the base class, and those needed have to be defined in subclasses.
-
-- These callback functions call methods that are either base class methods or specific class methods (see below).
-
-- Motion of objects is typically triggered by a picking event (callback `on_pick`) or mouse press event (callback `on_mouse_press`) and is then managed by the callback function `on_motion`. **Cursor** works a little differently: it is always moving by default and deactivates when the mouse is pressed, to avoid display bugs that appear when zooming/panning in blitting mode.
+- Callback functions (`on_mouse_press`, `on_motion`, etc.) can be redefined in subclasses if necessary. In the base class, they are optimized for click-enabled draggable objects like Line and Rect. These callback functions call methods that are either base class methods or specific class methods (see below). For example, motion of draggable objects is triggered by a picking event (callback `on_pick`) and is then managed by the callback function `on_motion`. **Cursor** redefines the adequate methods to fit its different behavior.
 
 - During motion, blitting is used for fast rendering. The principle is to save non-moving objects as a background pixel image and just re-draw moving objects on it. If blitting is deactivated with the `blit = False` option, all contents on the figure is re-drawn at every step, which is much slower and results in lag. The `cls.blit` bool attribute is managed by the base class and common to all subclasses, so that the last instance of any class defines whether blitting is used or not for all objects present.
 
 - Because several objects can be moving at the same time (e.g. two lines dragged by the same click), display and blitting can be tricky and buggy. To solve this problem, one of the moving objects is defined as the leader. The leader object is stored in the `cls.leader` attribute of the base class, which is thus common to all subclasses. Only the leader calls graph update events, during which all other moving objects (stored in another class attribute `cls.moving_objects`) are updated at the same time.
 
-- The tasks above are managed by `initiate_motion` (define leader) and `update_graph` (synchronized animation and blitting), two base class methods that call specific class methods when needed (see below); `reset_after_motion` is called at the end of motion (typically on mouse release) to reset everything properly.
+- The tasks above are managed by `initiate_motion` (define leader) and `update_graph` (synchronized animation and blitting), two base class methods that call specific class methods when needed (see below); `reset_after_motion` is called at the end of motion (typically on mouse release) to reset everything properly. Once again, the Cursor class manages things a bit differently but uses the same `update_graph` method.
 
 
 ## Base class
@@ -28,11 +25,9 @@ The methods and attributes below are common to all subclasses through the base c
     
 - **update_graph(event)** manages the motion of objects in the figure and should only be called by the `cls.leader` object (defined in `initiate_motion`, see below); other objects are drawn with a loop on all `moving_objects`. In subclasses, `update_graph` is typically called in the `on_motion` callback. 
 
-- **initiate motion(event)** needs to be called before `update_graph` to define the leading object, define animated artists on the figure, and store other useful info for motion. In particular, it calls the `set_active_info` method that needs to be defined in the subclass, as well as the `set_press_info` and `set_motion_tracking` methods which are defined in the base class. An exception is for cursors, which are always moving by default, and which deactivate during the motion of other objects (lines, rectangles, etc.). Cursor objects, as a result, are never defined as leaders. `initiate motion` needs to be called in the subclass by another method or callback (typically `on_pick` or `on_press`) that itself already defines which objects will be moving (by adding them to `moving_objects`).
+- **initiate motion(event)** needs to be called before `update_graph` to define the leading object, define animated artists on the figure, and store other useful info for motion. In particular, it calls the `set_active_info` method that needs to be defined in the subclass, as well as the `set_press_info` and `set_motion_tracking` methods which are defined in the base class. An exception is for cursors, which are always moving by default, and which deactivate during the motion of other objects (lines, rectangles, etc.). Cursor objects, as a result, are never defined as leaders. `initiate motion` needs to be called in the subclass by another method or callback (typically `on_pick` or `on_press`) that itself already defines which objects will be moving (by adding them to `moving_objects`). Cursor does not use this method.
 
-- **set_motion_tracking()**: generate dictionaries `x_inmotion` and `y_inmotion`that store positions of tracked points during motion. For it to work, the attribute `all_pts` needs to be defined by the subclass `create` method.
-
-- **set_press_info(event)**: generate information about a click event, e. g. its position and the position the object relative to it, stored in the dictionary `self.press_info`.
+- **set_press_info(event)**: generate information about a click event, i.e. its position and the position the object's elements (tracked points) relative to it, all stored in the dictionary `self.press_info`. It also defines the attribute `self.moving_positions`, which is a dictionary that store positions of tracked points during motion. For it to work, the attribute `all_pts` needs to be defined by the subclass `create` method. Cursor overwrites this method.
 
 - **reset_after_motion()** basically reverses `initiate_motion` and other parameters.
 
@@ -42,7 +37,10 @@ The methods and attributes below are common to all subclasses through the base c
 
 - **get_pt_position(pt, option)** returns the position x, y (tuple) of a matplotlib single point from the matplotlib.lines.Line2D data, either as data coordinate tied to axes (`option='data'`, default), or as absolute pixel coordinates in the figure (`option='px'`)
 
-- **connect()**, **disconnect()**, and ***callbacks***: see above.
+- **create()**, **update_position()** and **set_active_info()** need to be defined in the subclasses with some specific constraints, see below.
+
+- **connect()**, **disconnect()** manage the Matplotlib figure event manager, and ***callbacks*** are optimized for draggable objects,  see above.
+
 
 ### Class methods
 
@@ -71,11 +69,11 @@ The methods and attributes below are common to all subclasses through the base c
 
 The methods below are present in the base class but are (mostly) empty. They need to be redefined in each subclass to fit the needs of that specific class.
 
-- **create()**: create the object. The minimal thing it needs to do is define the `all_artists` attribute, which is a list of all Matplotlib artists the object is made of, and `all_pts` which is a list of the points that need to be tracked during motion (typically, all points composing the object). Apart from this, its structure (number of arguments etc.) can be adapted for the needs of every subclass.
+- **create()**: create the object. The minimal thing it needs to do is define the `all_artists` attribute, which is a list of all Matplotlib artists the object is made of, and `all_pts` which is a list of the points (Line2D artists with a single (x, y) coordinate) that need to be tracked during motion (typically, all points composing the object). Apart from this, its structure (number of arguments etc.) can be adapted for the needs of every subclass.
 
-- **update_position(event)** is called by `update_graph` to define how object of every specific class needs to be updated following the position of the mouse (mouse event `event`).
+- **update_position(event)** is called by `update_graph` to define how an object of every specific class needs to be updated following the position of the mouse (mouse event `event`).
 
-- **set_active_info**: generate information about the active object, e. g. its mode of motion and which parts of it need to be updated during motion, stored (either directly in the method or as a return of the method) in the dictionary `self.active_info`.
+- **set_active_info**: generate information about the active object, e.g. its mode of motion and which parts of it need to be updated during motion, stored in the dictionary `self.active_info`.
 
 ### Callbacks
 
@@ -90,12 +88,12 @@ To summarize the information above, subclasses need to do the following things:
 - *do not* append instance to global `cls.all_interactive_objects` (taken care of by the base class),
 - redefine locally the `self.create`, `self.update_position`, `self.set_active_info` methods,
 - make sure `self.create` defines `all_artists` and `all_pts`,
-- define locally the callback functions and make them call the class methods,
 - make sure to keep `postodata` and `datatopos` definitions in the `on_resize` callback,
-- call `self.initiate_motion` (global) to define leader or check existing leader before motion,
-- call `self.update_graph` (global) to create animation during motion or to trigger object update; for motion, make sure that only the leading object calls the method,
-- call `self.reset_after_motion` after motion is done to reset things like leader, background, moving_objects and other info.
-- if not using the initiate/reset method, make sure the subclass manages addition and removal to `cls.moving_objects`.
+- In the adequate callbacks:
+    + call `self.initiate_motion` (global) to define leader, or check existing leader before motion,
+    + call `self.update_graph` (global) to create animation during motion or to trigger object update; during motion, make sure that only the leading object calls the method,
+    + call `self.reset_after_motion` after motion is done to reset things like leader, background, moving_objects and other info.
+    + if not using the initiate/reset methods described above, make sure the subclass manages addition and removal to `cls.moving_objects`.
 
 
 ## Testing
@@ -120,7 +118,7 @@ To test the Line class, run
 ```python
 plov.line.main()
 ```
-This will instantiate various lines on different axes of two figures, with linerar and log scales. Verify the following:
+This will instantiate various lines on different axes of two figures, with linear and log scales. Verify the following:
 - Dragging works on all axes, in both dragging modes (by clicking on line ends or by clicking on the line itself).
 - Dragging two lines or more at the same time works in both modes.
 - Use matplotlib's zooming and panning tool on axes with lines. Check in particular that when finishing the zoom, moving the mouse again without zooming activated does not produce blitting bugs.
@@ -135,6 +133,10 @@ To test the Line class, run
 plov.rectangle.main()
 ```
 Testing follows the same procedure as with the Line class. Also try instantiating lines and rectangles in the same axes and drag them separately or at the same time.
+
+Specific things to test for rectangles:
+- Dragging the rectangle "over itself" by making the lines cross should not be problematic.
+- Center point should always be in the center of the rectangle, even in nonlinear axes.
 
 ### Cursor class and ginput
 To test the Cursor class, run

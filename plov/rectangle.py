@@ -2,6 +2,7 @@
 
 # TODO -- Add blocking behavior to be able to define cropzones etc.
 # TODO -- Add option for appearance of center
+# TODO -- add possibility to interactively change color
 
 
 import matplotlib.pyplot as plt
@@ -21,8 +22,8 @@ def main(blit=True, backend=None):  # For testing purposes
     xx = np.exp(-tt)
     ax1.plot(tt, xx, '-b')
     
-    #ax1.set_xscale('log')
-    #ax1.set_yscale('log')
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
 
     r1 = Rect()
 
@@ -32,7 +33,7 @@ def main(blit=True, backend=None):  # For testing purposes
         
 
 class Rect(InteractiveObject):
-    """Interactive draggable rectangle on matplotlib figure/axes.
+    """Interactive draggable rectangle in matplotlib figure/axes.
     
     Left click to drag rectangle, right click to remove it. Clicking can be
     done on the edges, vertices (corners), or on the center. These clicks
@@ -45,7 +46,7 @@ class Rect(InteractiveObject):
     - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - 'pickersize' (float, default: 5), tolerance for object picking.
-    - `color` (matplotlib's color, default: None (class default value)).
+    - `color` (matplotlib's color, default: 'r' (red)).
 
     Appearance of the vertices (corners):
     - `ptstyle` (matplotlib's marker, default: dot '.').
@@ -117,26 +118,29 @@ class Rect(InteractiveObject):
     def set_initial_position(self):
         """Set position of new line, avoiding existing lines if necessary."""
         
+        w, h = .5, .5 # relative initial width/height  of rectangle in to axes
+        
         xmin, xmax = self.xlim
         ymin, ymax = self.ylim
         
-        w = 0.5 # relative width of rectangle compared to axes
-        h = 0.5 # relative height
+        # Move into px coordinates to avoid problems with nonlinear axes
+        xmin, ymin = self.datatopx((xmin, ymin))
+        xmax, ymax = self.datatopx((xmax, ymax))
         
         x_left = (1 - w) / 2 * (xmax - xmin) + xmin
-        x_right = xmax - x_left
+        x_right = (1 + w) / 2 * (xmax - xmin) + xmin
         
         y_low = (1 - h) / 2 * (ymax - ymin) + ymin
-        y_high = ymax - y_low
+        y_high = (1 + h) / 2 * (ymax - ymin) + ymin
         
         x_center = (x_left + x_right) / 2
         y_center = (y_low + y_high) / 2
         
-        pos1 = (x_left, y_low)
-        pos2 = (x_right, y_low)
-        pos3 = (x_right, y_high)
-        pos4 = (x_left, y_high)
-        posc = (x_center, y_center)
+        pos1 = self.pxtodata((x_left, y_low))
+        pos2 = self.pxtodata((x_right, y_low))
+        pos3 = self.pxtodata((x_right, y_high))
+        pos4 = self.pxtodata((x_left, y_high))
+        posc = self.pxtodata((x_center, y_center))
         
         return pos1, pos2, pos3, pos4, posc
     
@@ -199,8 +203,7 @@ class Rect(InteractiveObject):
     def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
         
-        x = event.x   # pixel positions
-        y = event.y
+        x, y = event.x, event.y  # pixel positions
         
         corners = self.all_artists[:4]  # not all_pts which can contain additional tracking pts
         lines = self.all_artists[4:-1]
@@ -213,98 +216,61 @@ class Rect(InteractiveObject):
         if mode in ['horz_edge', 'vert_edge', 'center']:
             
             # get where click was initially made and calculate motion
-            x_press, y_press = self.press_info
-            dx = x - x_press['click'] if mode != 'horz_edge' else 0
-            dy = y - y_press['click'] if mode != 'vert_edge' else 0
+            x0, y0 = self.press_info['click']
+            dx = x - x0 if mode != 'horz_edge' else 0
+            dy = y - y0 if mode != 'vert_edge' else 0
             
-            for pt in set(active_pts):
-                if pt != center:
-                    x_new = x_press[pt] + dx
-                    y_new = y_press[pt] + dy
+            for pt in active_pts:
+                x0_pt, y0_pt = self.press_info[pt]
+                if pt != center:  
+                    x_new, y_new = x0_pt + dx, y0_pt + dy
                 else:   # center point
                     norm = 1 if mode =='center' else 0.5
-                    x_new = x_press[pt] + dx * norm
-                    y_new = y_press[pt] + dy * norm
-                x_data, y_data = self.pxtodata((x_new, y_new))
-                self.x_inmotion[pt] = x_data
-                self.y_inmotion[pt] = y_data     
+                    x_new = x0_pt + dx * norm
+                    y_new = y0_pt + dy * norm
+                self.moving_positions[pt] = x_new, y_new   
                 
         elif mode in range(4):  # corner motion
-        
+       
             i = mode
             picked_corner = corners[i]
             next_corner = corners[(i+1)%4]
             prev_corner = corners[(i-1)%4 ]
             opposite_corner = corners[(i+2)%4 ]  
  
-            x_data, y_data = self.pxtodata((x, y))
-            self.x_inmotion[picked_corner] = x_data
-            self.y_inmotion[picked_corner] = y_data
-            
-            xref, yref = self.get_pt_position(picked_corner)
+            self.moving_positions[picked_corner] = x, y
+            xprev, yprev = self.moving_positions[prev_corner]
+            xnext, ynext = self.moving_positions[next_corner]
             
             if i%2:  # bottom right corner or top left
-                self.y_inmotion[prev_corner] = y_data
-                self.x_inmotion[next_corner] = x_data
+                self.moving_positions[prev_corner] = xprev, y
+                self.moving_positions[next_corner] = x, ynext
             else:  # bottom left or top right corner
-                self.x_inmotion[prev_corner] = x_data
-                self.y_inmotion[next_corner] = y_data
+                self.moving_positions[prev_corner] = x, yprev
+                self.moving_positions[next_corner] = xnext, y
+            
+            # Calculate center pos from picked pt and diagonally opposed one
+            x1, y1 = self.moving_positions[picked_corner]
+            x2, y2 = self.moving_positions[opposite_corner]
+            self.moving_positions[center] = (x1 + x2) / 2, (y1 + y2) / 2
                 
-            self.x_inmotion[center] = (self.x_inmotion[picked_corner] +
-                                       self.x_inmotion[opposite_corner]) / 2
-            self.y_inmotion[center] = (self.y_inmotion[picked_corner] +
-                                       self.y_inmotion[opposite_corner]) / 2
             
         # now apply the changes to the graph ---------------------------------
         for pt in active_pts:
-            pt.set_xdata(self.x_inmotion[pt])
-            pt.set_ydata(self.y_inmotion[pt])
+            xnew, ynew = self.pxtodata(self.moving_positions[pt])
+            pt.set_data(xnew, ynew)
         
         for line in active_lines:
             i = lines.index(line)
-            pt1 = corners[i]
-            pt2 = corners[i-1]
-            line.set_xdata([self.x_inmotion[pt1], self.x_inmotion[pt2]])
-            line.set_ydata([self.y_inmotion[pt1], self.y_inmotion[pt2]])
-        
+            x1, y1 = self.pxtodata(self.moving_positions[corners[i-1]])
+            x2, y2 = self.pxtodata(self.moving_positions[corners[i]])
+            line.set_data([x1, x2], [y1, y2])
+            
             
 # ============================ callback functions ============================
-
-    
-    def on_pick(self, event):
-        """If picked, save picked objects, or delete objects if right click"""
-        selected = event.artist
-        if event.mouseevent.button == 3 and (selected in self.all_artists):
-            self.delete()
-            return
-        if selected in self.all_artists:
-            self.picked_artists.add(selected)
-    
-    def on_mouse_press(self, event):
-        """When mouse button is pressed, initiate motion."""
-        if len(self.picked_artists) == 0:
-            return
-        else:
-            self.initiate_motion(event)
-    
-    def on_motion(self, event):
-        """Leader artist triggers graph update based on mouse position"""
-        if not self.moving:
-            return
-        # only the leader triggers moving events (others drawn in update_graph)
-        if self.__class__.leader is self:
-            self.update_graph(event)
-            
-    def on_mouse_release(self, event):
-        """When mouse released, reset attributes to non-moving"""
-        if self not in self.__class__.moving_objects:
-            return
-        else:
-            self.reset_after_motion()
             
     def on_key_press(self, event):
         pass
-    
     
 # ================================ direct run ================================
     

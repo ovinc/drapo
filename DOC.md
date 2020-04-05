@@ -8,14 +8,14 @@
 
 - All interactive objects are subclasses of a base class called *InteractiveObject*. See *CONTRIBUTING.md* for details on code structure, implementation and subclassing. 
 
-- By default, all instances are non-blocking. Use `block=True` to make them block the console (not implemented in the Line class at the moment). The ginput() function uses the cursor class in blocking mode.
+- By default, all instances are non-blocking. Use `block=True` to make them block the console (not implemented in Line/Rect at the moment). The ginput() function uses the Cursor class in blocking mode.
 
 ## Line class
 
-Interactive draggable line on matplotlib figure/axes.
+Interactive draggable line in matplotlib figure/axes.
 
 ```python
-Line(pos=(.2, .2, .8, .8), fig=None, ax=None, blit=True, pickersize=5, color='k', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True)
+Line(fig=None, ax=None, pickersize=5, color='k', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True, blit=True, block=False)
 ```
 
 The line is composed of three elements : two points at the edge (pt1, pt2)
@@ -33,10 +33,9 @@ Right-clicking removes and deletes the line.
 All parameters optional so that a line can simply be created by `Line()`
 without any other specification.
 
-- `pos` (4-tuple, default: (.2, .2, .8, .8)). Initial position in axes.
 - `fig` (matplotlib figure, default: current figure, specified as None).
 - `ax` (matplotlib axes, default: current axes, specified as None).
-- 'pickersize' (float, default: 5), tolerance for line picking.
+- `pickersize` (float, default: 5), tolerance for line picking.
 - `color` (matplotlib's color, default: red, i.e. 'r').
 
 Appearance of the edge points (pt1, pt2):
@@ -50,6 +49,10 @@ Appearance of the connecting line (link):
 Instantiation option:
 - `avoid_existing` (bool, default: True). Avoid overlapping existing lines
 (only avoids that edge points overlap, but lines can still cross).
+
+Other
+- `blit` (bool, default True). If True, blitting is used for fast rendering
+- `block`(bool, default False). If True, object blocks the console (block not implemented yet for Line and Rect).
 
 ### Notes
 
@@ -68,6 +71,47 @@ drag it away.
 - If two lines coincide completely (within pickersize), it is however not
 possible to separate them again. Best is to consider them as a single line
 and instantiate another line.
+
+
+## Rect class
+-------------
+
+Interactive draggable rectangle in matplotlib figure/axes.
+
+```python
+Rect(self, fig=None, ax=None, pickersize=5, color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False):
+```
+
+Left click to drag rectangle, right click to remove it. Clicking can be
+done on the edges, vertices (corners), or on the center. These clicks
+trigger different modes of motion.
+
+### Parameters
+
+All parameters optional so that a rectangle can be created by `Rect()`.
+
+- `fig` (matplotlib figure, default: current figure, specified as None).
+- `ax` (matplotlib axes, default: current axes, specified as None).
+- 'pickersize' (float, default: 5), tolerance for object picking.
+- `color` (matplotlib's color, default: 'r' (red)).
+
+Appearance of the vertices (corners):
+- `ptstyle` (matplotlib's marker, default: dot '.').
+- `ptsize` (float, default: 5). Marker size.
+
+Appearance of the edges (lines):
+- `linestyle` (matplotlib's linestyle, default: continuous '-').
+- `linewidth` (float, default: 1). Line width.
+
+Other
+- `blit` (bool, default True). If True, blitting is used for fast rendering
+- `block`(bool, default False). If True, object blocks the console
+(block not implemented yet for Line and Rect)
+
+
+### Notes
+
+- Click on the center of the rectangle (marked with a cross) to move the rectangle as a whole in a *solid body* fashion.
 
 
 ## Cursor class
@@ -273,6 +317,10 @@ does the same, but is active forever. Deactivate it with right-click.
 it is also possible to run the following in a python shell (normally used for testing, see *CONTRIBUTING.md*) after running `import plov`:
 ```python
 plov.line.main()
+```
+and/or
+```python
+plov.rectangle.main()
 ```
 and/or
 ```python
