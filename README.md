@@ -4,6 +4,7 @@
 ## General information
 
 This Python 3 package provides a set of interactive graphical objects on matplotlib figures: draggable lines and rectangles, cursor, and associated useful functions such as ginput() for measuring/extracting data interactively.
+Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `matplotlib tk`.
 
 ### Draggable shapes
 - **Line** is a class that creates a draggable line.
@@ -81,7 +82,8 @@ Sometimes the current figure/axes are not the ones where one wants to create the
 If the package does not work, try the following hacks:
 - If instantiating from the command line, Matplotlib figures need to not block the console. For this, use `plt.show(block=False)` when creating the figure.
 - Try another interactive action on the figure such as zooming/panning to see if it makes the objects miraculously appear.
-- Use a different matplotlib backend. In particular, *TkAgg* and *MacOSX* seem to cause problems where nothing is drawn or where the figure crashes. Try e.g. `matplotlib.use('Qt5Agg')` or `matplotlib.use('Qt4Agg')`.
+- Use a different matplotlib backend. In particular, *MacOSX* seem to cause problems where nothing is drawn or where the figure crashes. Try e.g. `matplotlib.use('Qt5Agg')`, `matplotlib.use('Qt4Agg')` or `matplotlib.use('TkAgg')`.
+- Similarly, in Jupyter, an interactive backend needs to be used, with the command `%matplotlib qt` or `%matplotlib tk`.
 - Pass `blit=False` in the argument of any class or function (except ClickFig) to see if the problem comes from the blitting strategy used for fast rendering.
 - Contact the author if problem persist.
 
