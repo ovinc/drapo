@@ -71,21 +71,19 @@ class Rect(InteractiveObject):
         
         super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
         
-        options = (pickersize, color, ptstyle, ptsize, linestyle, linewidth)
-        self.create(options)
+        xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
+        
+        self.create(pickersize, color, ptstyle, ptsize, linestyle, linewidth)
         
         # to prevent any shift in axes limits when instanciating line. The
-        # initial self.xlim / self.ylim setting is done in InteractiveObject
-        self.ax.set_xlim(self.xlim)
-        self.ax.set_ylim(self.ylim)
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
         
         self.fig.canvas.draw()
         
         
-    def create(self, options):
+    def create(self, pickersize, color, ptstyle, ptsize, linestyle, linewidth):
         
-        (pickersize, color, ptstyle, ptsize, linestyle, linewidth) = options
-
         positions = self.set_initial_position()
         corner_positions = positions[:-1]  # the last one is the center
         
@@ -120,8 +118,8 @@ class Rect(InteractiveObject):
         
         w, h = .5, .5 # relative initial width/height  of rectangle in to axes
         
-        xmin, xmax = self.xlim
-        ymin, ymax = self.ylim
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
         
         # Move into px coordinates to avoid problems with nonlinear axes
         xmin, ymin = self.datatopx((xmin, ymin))

@@ -40,7 +40,7 @@ def main(blit=True, backend=None):  # for testing purposes
     # without the block=False option, the program does not go to ginput
     plt.show(block=False)
 
-    data = ginput(5)
+    data = ginput(5, blit=blit)
     print(data)
 
    
@@ -111,8 +111,8 @@ class Cursor(InteractiveObject):
                  n=1000, block=False, timeout=0,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
-        
-        super().__init__(fig, color=color, blit=blit, block=block)    
+
+        super().__init__(fig, color=color, blit=blit, block=block)
 
         # Cursor state attributes
         self.press = False  # active when mouse is currently pressed
@@ -139,11 +139,10 @@ class Cursor(InteractiveObject):
         self.marks = []  # list containing all artists drawn
         
         self.fig.canvas.draw()
-
+        
         # the blocking option below needs to be after connect()
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)
-            
 
     def __repr__(self):
 
@@ -200,6 +199,12 @@ class Cursor(InteractiveObject):
         self.all_artists = hline, vline
         # Note: addition to all_objects is made automatically by InteractiveObject parent class
         self.__class__.moving_objects.add(self)
+        
+        # Below is for cursor to be visible upon creation
+        if self.__class__.blit:
+            self.fig.canvas.blit(ax.bbox)
+        else:
+            self.fig.canvas.draw()
 
 
     def update_position(self, event):
@@ -248,6 +253,7 @@ class Cursor(InteractiveObject):
             mark, = self.ax.plot(x, y, marker=self.marksymbol, color=self.color,
                                  markersize=self.marksize)
             self.marks.append(mark)
+        self.fig.canvas.draw()
 
 
     def remove_point(self):
@@ -265,6 +271,7 @@ class Cursor(InteractiveObject):
             else:
                 mark = self.marks.pop(-1)
                 mark.remove()
+        self.fig.canvas.draw()
 
 
 # ============================ callback functions ============================

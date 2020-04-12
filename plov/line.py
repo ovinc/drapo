@@ -95,14 +95,15 @@ class Line(InteractiveObject):
         
         super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
 
-        # create line, and attributes pt1, pt2, link
+
+        xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
+        
         self.create(pickersize, self.color, ptstyle, ptsize, 
                    linestyle, linewidth, avoid_existing)
 
         # to prevent any shift in axes limits when instanciating line. The
-        # initial self.xlim / self.ylim setting is done in InteractiveObject
-        self.ax.set_xlim(self.xlim)
-        self.ax.set_ylim(self.ylim)
+        self.ax.set_xlim(xlim)
+        self.ax.set_ylim(ylim)
         
         self.fig.canvas.draw()
 
@@ -143,8 +144,8 @@ class Line(InteractiveObject):
         
         a1, b1, a2, b2 = .2, .2, .8, .8  # relative initial position in axes
         
-        xmin, xmax = self.xlim
-        ymin, ymax = self.ylim
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
         # Move into px coordinates to avoid problems with nonlinear axes
         xmin, ymin = self.datatopx((xmin, ymin))
         xmax, ymax = self.datatopx((xmax, ymax))

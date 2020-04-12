@@ -46,14 +46,11 @@ class InteractiveObject:
     colors = [black, 'r', 'b', 'g', white]
     
 
-    def __init__(self, fig=None, ax=None, color=None, blit=True, block=False):     
+    def __init__(self, fig=None, ax=None, color=None, 
+                 blit=True, block=False):     
 
         self.fig = plt.gcf() if fig is None else fig
         self.ax = plt.gca() if ax is None else ax
-
-        # This is because adding lines can re-dimension axes limits
-        self.xlim = self.ax.get_xlim()
-        self.ylim = self.ax.get_ylim()
         
         # Connect matplotlib event handling to callback functions
         self.connect()
@@ -94,7 +91,6 @@ class InteractiveObject:
         # Need to be redefined if figure is resized
         self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
         self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates     
-        
 
         # this seems to be a generic way to bring window to the front but I
         # have not checked with all backends etc, and it does not always work
