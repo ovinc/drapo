@@ -96,12 +96,14 @@ class InteractiveObject:
         # have not checked with all backends etc, and it does not always work
         plt.get_current_fig_manager().show()
 
-
     def __repr__(self):
         object_list = self.__class__.class_objects()
         objects_on_fig = [obj for obj in object_list if obj.fig == self.fig]
         n_on_fig = len(objects_on_fig)
-        n = objects_on_fig.index(self) + 1
+        try:
+            n = objects_on_fig.index(self) + 1
+        except ValueError:  # means object has been deleted
+            n = 'deleted'
         name = self.__class__.name
         return f'{name} #{n}/{n_on_fig} in Fig. {self.fig.number}.'
 

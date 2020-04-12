@@ -20,6 +20,7 @@ from .cursor import ginput
 from .line import Line
 
 from .rectangle import Rect
+from .rectangle import rinput
 
 from .clickfig import ClickFig
 

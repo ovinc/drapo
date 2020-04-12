@@ -79,12 +79,10 @@ and instantiate another line.
 Interactive draggable rectangle in matplotlib figure/axes.
 
 ```python
-Rect(self, fig=None, ax=None, pickersize=5, color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False):
+Rect(self, fig=None, ax=None, position=None, pickersize=5, color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False, timeout=0):
 ```
 
-Left click to drag rectangle, right click to remove it. Clicking can be
-done on the edges, vertices (corners), or on the center. These clicks
-trigger different modes of motion.
+Left click to drag rectangle, right click or enter to remove it. Clicking can be done on the edges, vertices (corners), or on the center. These clicks trigger different modes of motion.
 
 ### Parameters
 
@@ -92,7 +90,8 @@ All parameters optional so that a rectangle can be created by `Rect()`.
 
 - `fig` (matplotlib figure, default: current figure, specified as None).
 - `ax` (matplotlib axes, default: current axes, specified as None).
-- 'pickersize' (float, default: 5), tolerance for object picking.
+- `position` (4-tuple (xmin, ymin, width, height) in data coordinates; default None, i.e. rectangle automatically centered in axes).
+- `pickersize` (float, default: 5), tolerance for object picking.
 - `color` (matplotlib's color, default: 'r' (red)).
 
 Appearance of the vertices (corners):
@@ -105,13 +104,15 @@ Appearance of the edges (lines):
 
 Other
 - `blit` (bool, default True). If True, blitting is used for fast rendering
-- `block`(bool, default False). If True, object blocks the console
-(block not implemented yet for Line and Rect)
+- `block`(bool, default False). If True, object blocks the console (block not implemented yet for Line and Rect).
+- `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
 
 ### Notes
 
 - Click on the center of the rectangle (marked with a cross) to move the rectangle as a whole in a *solid body* fashion.
+
+- Right-click will simply remove the rectangle, while pressing <kbd>enter</kbd> will save its position in the attribute `self.recorded_position` before erasing the rectangle. This is useful for the *rinput()* function.
 
 
 ## Cursor class
@@ -217,6 +218,7 @@ blitting is temporarily suspended during a click+drag event.
 - As a result, the cursor does not reappear immediately after panning or
 zooming if blitting is activated, but one needs to move the mouse.
 
+
 ## ginput function
 ------------------
 
@@ -235,6 +237,23 @@ with only an additional one: blit (bool, default True): see Cursor.
 
 ### Returns
 List of tuples corresponding to the list of clicked (x, y) coordinates.
+
+
+
+## rinput function
+------------------
+
+Select area of figure with interactive rectangle (enter to validate).
+
+```python
+position = rinput():
+```
+
+### Parameters
+None at the moment. Options will be added soon.
+
+### Returns
+4-tuple (xmin, ymin, width, height) of data coordinates.
 
 
 ## ClickFig class
@@ -301,6 +320,11 @@ up arrow and changed color by using the left/right arrows.
 data = ginput(4, show_clicks=False)
 ```
 will return a tuple of 4 points clicked on the figure (or managed with keystrokes), but without showing the location of the clicks on the figure with a marker.
+
+```python
+position = rinput()
+```
+will instantiate an interactive rectangle on the figure. Press enter to deactivate the rectangle and return its coordinates as a tuple (xmin, ymin, width, height) in data coordinates.
 
 ```python
 ClickFig(4)

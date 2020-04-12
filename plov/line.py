@@ -105,7 +105,7 @@ class Line(InteractiveObject):
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
         
-        self.fig.canvas.draw()
+        self.fig.canvas.draw()  # Useful?
 
 # ============================ main line methods =============================
 
@@ -185,7 +185,7 @@ class Line(InteractiveObject):
 
 
     def set_active_info(self):
-        """separates points into active/inactive and detects motion mode"""
+        """Set active/inactive points during motion and detect motion mode."""
         line = self.all_artists[2]
         
         # set which points are active and corresponding motion mode ----------

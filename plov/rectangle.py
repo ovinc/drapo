@@ -45,6 +45,8 @@ class Rect(InteractiveObject):
 
     - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
+    - `position` (4-tuple (xmin, ymin, width, height) in data coordinates;
+                  default None, i.e. rectangle automatically centered in axes).
     - 'pickersize' (float, default: 5), tolerance for object picking.
     - `color` (matplotlib's color, default: 'r' (red)).
 
@@ -59,32 +61,38 @@ class Rect(InteractiveObject):
     Other
     - `blit` (bool, default True). If True, blitting is used for fast rendering
     - `block`(bool, default False). If True, object blocks the console
-    (block not implemented yet for Line and Rect)
+    (block not implemented yet for Line and Rect).
+    - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
     """
     
     name = "Draggable Rectangle"
 
     
-    def __init__(self, fig=None, ax=None, pickersize=5, color='r',
-                 ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
-                 blit=True, block=False):
+    def __init__(self, fig=None, ax=None, position=None, pickersize=5, 
+                 color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
+                 blit=True, block=False, timeout=0):
         
         super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
         
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
         
-        self.create(pickersize, color, ptstyle, ptsize, linestyle, linewidth)
+        self.create(pickersize, position,
+                    color, ptstyle, ptsize, linestyle, linewidth)
         
         # to prevent any shift in axes limits when instanciating line. The
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
         
-        self.fig.canvas.draw()
+        self.fig.canvas.draw()  # Useful?
+        
+        if self.block:
+            self.fig.canvas.start_event_loop(timeout=timeout)
         
         
-    def create(self, pickersize, color, ptstyle, ptsize, linestyle, linewidth):
+    def create(self, pickersize, position,
+               color, ptstyle, ptsize, linestyle, linewidth):
         
-        positions = self.set_initial_position()
+        positions = self.set_initial_position(position)
         corner_positions = positions[:-1]  # the last one is the center
         
         # Create all vertices (corners) of the rectangle ---------------------
@@ -113,10 +121,8 @@ class Rect(InteractiveObject):
         self.all_pts = (*corners, center)
     
     
-    def set_initial_position(self):
+    def set_initial_position(self, position):
         """Set position of new line, avoiding existing lines if necessary."""
-        
-        w, h = .5, .5 # relative initial width/height  of rectangle in to axes
         
         xmin, xmax = self.ax.get_xlim()
         ymin, ymax = self.ax.get_ylim()
@@ -125,12 +131,17 @@ class Rect(InteractiveObject):
         xmin, ymin = self.datatopx((xmin, ymin))
         xmax, ymax = self.datatopx((xmax, ymax))
         
-        x_left = (1 - w) / 2 * (xmax - xmin) + xmin
-        x_right = (1 + w) / 2 * (xmax - xmin) + xmin
-        
-        y_low = (1 - h) / 2 * (ymax - ymin) + ymin
-        y_high = (1 + h) / 2 * (ymax - ymin) + ymin
-        
+        if position is None:
+            w, h = .5, .5 # relative initial width/height of rectangle in axes
+            x_left = (1 - w) / 2 * (xmax - xmin) + xmin
+            x_right = (1 + w) / 2 * (xmax - xmin) + xmin 
+            y_low = (1 - h) / 2 * (ymax - ymin) + ymin
+            y_high = (1 + h) / 2 * (ymax - ymin) + ymin
+        else:
+            x0, y0, width, height = position            
+            x_left, y_low = self.datatopx((x0, y0))
+            x_right, y_high = self.datatopx((x0 + width, y0 + height))
+               
         x_center = (x_left + x_right) / 2
         y_center = (y_low + y_high) / 2
         
@@ -143,8 +154,26 @@ class Rect(InteractiveObject):
         return pos1, pos2, pos3, pos4, posc
     
     
+    def get_position(self):
+        """Get position (xmin, ymin, width, height) in data coordinates."""
+        xs, ys = [], []
+        corners = self.all_artists[:4]
+        for pt in corners:
+            x, y = self.get_pt_position(pt, 'data')
+            xs.append(x)
+            ys.append(y)
+        try:
+            xmin, xmax, ymin, ymax = min(xs), max(xs), min(ys), max(ys)
+        except ValueError:
+            raise ValueError('Impossible to get position of Rect, probably '
+                             'because it has been deleted from the figure or '
+                              'because figure itself has been closed.')
+        w, h = xmax - xmin, ymax - ymin
+        return xmin, ymin, w, h 
+    
+    
     def set_active_info(self):
-        """separates points into active/inactive and detects motion mode"""
+        """Set active/inactive points during motion and detect motion mode."""
         
         corners = self.all_artists[:4]  # not all_pts which can contain additional tracking pts
         lines = self.all_artists[4:-1]
@@ -268,7 +297,34 @@ class Rect(InteractiveObject):
 # ============================ callback functions ============================
             
     def on_key_press(self, event):
-        pass
+        if event.key == 'enter':
+            print('Rectangle position recorded. Rectangle deleted.')
+            self.recorded_position = self.get_position()
+            self.delete()
+    
+    
+# ======================== function rinput ===================================
+
+def rinput():
+    """Select area of figure with interactive rectangle (enter to validate).
+    
+    Parameters
+    ----------
+    None at the moment. Options will be added soon.
+
+    Returns
+    -------
+    4-tuple (xmin, ymin, width, height) of data coordinates.
+    """
+    r = Rect(block=True)
+    try:
+        position = r.recorded_position
+    except AttributeError:
+        print('Warning - Rectangle deleted before data validation. Returning None.')
+        position = None
+    return position
+
+
     
 # ================================ direct run ================================
     

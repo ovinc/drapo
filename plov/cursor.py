@@ -202,7 +202,7 @@ class Cursor(InteractiveObject):
         
         # Below is for cursor to be visible upon creation
         if self.__class__.blit:
-            self.fig.canvas.blit(ax.bbox)
+            self.fig.canvas.blit(self.ax.bbox)
         else:
             self.fig.canvas.draw()
 

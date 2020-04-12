@@ -3,16 +3,19 @@
 
 ## General information
 
-This Python 3 package provides a set of interactive graphical objects on matplotlib figures: draggable lines and rectangles, cursor, and associated useful functions such as ginput() for measuring/extracting data interactively.
+This Python 3 package provides a set of interactive graphical objects on Matplotlib figures: draggable line, draggable rectangle, and moving cursor. It also provides graphical input functions for measuring/extracting data interactively from a figure, such as ginput (get location of clicks) and rinput (get region of interest from interactive rectangle).
 Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `matplotlib tk`.
 
 ### Draggable shapes
 - **Line** is a class that creates a draggable line.
 - **Rect** is a class that creates a draggable rectangle.
 
-### Cursor and ginput
+### Moving cursor
 - **Cursor** is a class that creates a cursor that follows the mouse
-- **ginput** is a function based on Cursor that returns data from clicks/keystrokes.
+
+### Graphical input functions
+- **ginput** is a function based on the Cursor class that returns position data from clicks/keystrokes.
+- **rinput** is a function based on the Rect class that returns position data delimited by an interactive rectangle.
 
 ### Other
 - **ClickFig** is a class that activates figures and axes (makes them the current ones) by mouse hovering and clicking.
@@ -52,19 +55,23 @@ from plov import Line, Cursor, Rect, ClickFig, ginput
 See documentation for options to change the appearance of these objects.
 See ClickFig below to activate axes interactively to be able to create the objects in specific axes as needed.
 
-### Cursor and ginput (extract data from mouse position)
+### Moving cursor
 
 `Cursor()` creates a cursor in the current figure, but contrary to the draggable objects, the cursor is not bound to specific axes. It is however bound to a figure, and will appear on whatever axes the mouse is currently on; it will switch axes if the mouse goes over other axes. No cursor is visible if the mouse is not currently on axes. 
 - Use <kbd>⇧ Shift</kbd> + left/right arrow keys to change color. 
 - Use <kbd>⇧ Shift</kbd> + up/down keys to change thickness.
 - Use the <kbd>space</kbd> bar to toggle visibility on/off.
 
-`ginput()` will return the data coordinates of one click on any axes of the current figure.
-- Use `ginput(n)` to record exactly n data points.
+### Graphical input functions
+
+`ginput()` will return the data coordinates (x, y) of one click on any axes of the current figure.
+- Use `ginput(n)` to record exactly n data points (returns list of tuples).
 - Use `ginput(-1)` for an undefined amount of points.
 - Left click or press <kbd>a</kbd> to add point.
 - Right click or press <kbd>z</kbd> to remove point.
 - Middle click or press <kbd>enter</kbd> to finish input.
+
+`rinput()` will instantiate an interactive rectangle and return its position as a tuple (xmin, ymin, width, height) when the <kbd>enter</kbd> key is pressed.
 
 ### Activate specific figure/axes (ClickFig)
 
