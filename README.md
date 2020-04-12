@@ -4,7 +4,7 @@
 ## General information
 
 This Python 3 package provides a set of interactive graphical objects on Matplotlib figures: draggable line, draggable rectangle, and moving cursor. It also provides graphical input functions for measuring/extracting data interactively from a figure, such as ginput (get location of clicks) and rinput (get region of interest from interactive rectangle).
-Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `matplotlib tk`.
+Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk`.
 
 ### Draggable shapes
 - **Line** is a class that creates a draggable line.
@@ -19,6 +19,10 @@ Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, us
 
 ### Other
 - **ClickFig** is a class that activates figures and axes (makes them the current ones) by mouse hovering and clicking.
+
+Below is an illustration of instances of Line (left, black), Rect (left, red), Cursor (right, green). The current mouse position is at the center of the cursor.
+
+<img src="example.jpg">
 
 ## Install
 
@@ -43,7 +47,7 @@ following install command instead: `python -m pip install -e .`.
 Below is a brief overview on how to use the package contents with the most basic features. For full documentation, see *DOC.md*.
 
 ```python
-from plov import Line, Cursor, Rect, ClickFig, ginput
+from plov import Line, Cursor, Rect, ClickFig, ginput, rinput
 ```
 
 ### Draggable objects
