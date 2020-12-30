@@ -9,7 +9,7 @@ Cursor and ginput
 - ginput is a function based on Cursor that returns data from clicks/keystrokes.
 
 Other
-- ClickFig is a class that activates figures and axes (makes them the current 
+- ClickFig is a class that activates figures and axes (makes them the current
 ones) by mouse hovering and clicking.
 
 """
@@ -23,6 +23,3 @@ from .rectangle import Rect
 from .rectangle import rinput
 
 from .clickfig import ClickFig
-
-
-__version__ = 1.1
