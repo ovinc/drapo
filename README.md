@@ -22,7 +22,7 @@ Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, us
 
 Below is an illustration of instances of Line (left, black), Rect (left, red), Cursor (right, green). The current mouse position is at the center of the cursor.
 
-![](https://raw.githubusercontent.com/ovinc/drapo/master/media/example.jpg)
+![](https://raw.githubusercontent.com/ovinc/drapo/master/example.jpg)
 
 
 # Install
