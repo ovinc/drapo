@@ -1,4 +1,4 @@
-# Plot-OV (plov) python package documentations
+# `drapo` detailed documentation
 
 ## General notes
 
@@ -6,7 +6,7 @@
 
 - The last interactive object instance dictates the blitting behavior (True or False) for every other existing object.
 
-- All interactive objects are subclasses of a base class called *InteractiveObject*. See *CONTRIBUTING.md* for details on code structure, implementation and subclassing. 
+- All interactive objects are subclasses of a base class called *InteractiveObject*. See *CONTRIBUTING.md* for details on code structure, implementation and subclassing.
 
 - By default, all instances are non-blocking. Use `block=True` to make them block the console (not implemented in Line/Rect at the moment). The ginput() function uses the Cursor class in blocking mode.
 
@@ -25,7 +25,7 @@ Dragging the line can be done in two different ways:
 - clicking on one edge: then the other edge is fixed during motion
 - clicking on the line itself: then the line moves as a whole (do not use this
   mode if the figure/axes have nonlinear scale, e.g. log)
-  
+
 Right-clicking removes and deletes the line.
 
 ### Parameters
@@ -56,7 +56,7 @@ Other
 
 ### Notes
 
-- By default, the line is created on the active figure/axes. 
+- By default, the line is created on the active figure/axes.
 To instantiate a line in other figure/axes, either specify the key/ax
 parameters, or use `ClickFig()` to activate these axes.
 
@@ -130,7 +130,7 @@ is not bound to specific axes: moving the mouse over different axes will
 plot the cursor in these other axes. Right now, the cursor is bound to a
 certain figure, however this could be changed easily.
 
-Cursor style can be modified with the options `color`, `linestyle` and 
+Cursor style can be modified with the options `color`, `linestyle` and
 `linewidth`, which correspond to matplotlib's parameters of the same name.
 By default, color is red, linestyle is dotted (:), linewidth is 1.
 
@@ -149,7 +149,7 @@ Addition / removal / stop of clicks are also achieved by key strokes:
 - 'z' for removal (corresponds to right click)
 - 'enter' for stopping clicks (corresponds to middle click)
 
-    
+
 ### Parameters
 
 All parameters optional so that a cursor can just be created by `Cursor()`
@@ -180,7 +180,7 @@ The last 2 parameters customize appearance of click marks when shown.
 
 ### Useful class methods
 
-- `erase_marks()`: erase click marks on the plot. 
+- `erase_marks()`: erase click marks on the plot.
 - `erase_data()`: reset recorded click data.
 
 The methods `create` and `delete` are used internally within the class and
@@ -195,10 +195,10 @@ are not meant for the user.
 - `clicknumber`: track the number of recorded clicks.
 - `clickdata`: stores the (x, y) data of clicks in a list.
 - `marks`: list of matplotlib artists containing all click marks drawn.
-    
+
 ### Notes
 
-- By default, the cursor is created on the active figure/axes. 
+- By default, the cursor is created on the active figure/axes.
 To instantiate a cursor in other figure/axes, either specify the key/ax
 parameters, or use `ClickFig()` to activate these axes.
 
@@ -209,7 +209,7 @@ other matplotlib's interactive features (e.g. backspace for "back").
 
 - Currently, the mark color is always the same as the cursor.
 
-- It is not allowed to have more than 1 cursor per figure, to avoid 
+- It is not allowed to have more than 1 cursor per figure, to avoid
 conflicts between cursors in blitting mode.
 
 - Using panning and zooming works with the cursor on; to enable this,
@@ -222,7 +222,7 @@ zooming if blitting is activated, but one needs to move the mouse.
 ## ginput function
 ------------------
 
-Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data. 
+Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data.
 
 ```python
 data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, blit=True):
@@ -264,16 +264,16 @@ Mouse that activates figures and axes by hovering and clicking.
 ```python
 ClickFig(n=-1, highlight=True)
 ```
-    
+
 - Left Click on figure / axes to make them the current ones in Matplotlib.
 - Right Click anywhere to deactivate the interactive mouse.
 
-Use `ClickFig()` to make the interactive mouse active, and select active axes 
-at will while still working on them. Use `ClickFig(highlight=False)` to not 
+Use `ClickFig()` to make the interactive mouse active, and select active axes
+at will while still working on them. Use `ClickFig(highlight=False)` to not
 see background color change during hovering.
 
 For just one-time selection, use `ClickFig()`. The background colors
-return to their original values once the ClickFig is deactivated (here, 
+return to their original values once the ClickFig is deactivated (here,
 after one click).
 
 To be able to select n times, use `ClickFig(n)`. Note that it is only the
@@ -291,7 +291,7 @@ last axes clicked that are activated.
 For the simplest quick-start examples, see *README.md*. The ones below show some more detailed features compared to basic use.
 
 ```python
-from plov import Line, Cursor, ClickFig, ginput
+from drapo import Line, Cursor, ClickFig, ginput
 ```
 for the initial import.
 
@@ -337,20 +337,20 @@ ClickFig(-1)
 ```
 does the same, but is active forever. Deactivate it with right-click.
 
-**Note**: to see direct use cases and instantiation of cursor and lines, 
-it is also possible to run the following in a python shell (normally used for testing, see *CONTRIBUTING.md*) after running `import plov`:
+**Note**: to see direct use cases and instantiation of cursor and lines,
+it is also possible to run the following in a python shell (normally used for testing, see *CONTRIBUTING.md*) after running `import drapo`:
 ```python
-plov.line.main()
+drapo.line.main()
 ```
 and/or
 ```python
-plov.rectangle.main()
+drapo.rectangle.main()
 ```
 and/or
 ```python
-plov.cursor.main()
+drapo.cursor.main()
 ```
 and/or
 ```python
-plov.clickfig.main()
+drapo.clickfig.main()
 ```

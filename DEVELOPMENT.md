@@ -1,8 +1,8 @@
-# Development information for Plot-OV (plov)
+# Development information for *drapo*
 
-All Plot-OV (plov) classes except ClickFig (not described here) use a **base class** named **InteractiveObject** located in the file *interactive_object.py*. The base class is mainly developed for objects that are set in motion when they are selected (picked) by a click, and moved by dragging the object while keeping the mouse pressed, like the **Line** and **Rect** classes. These classes, as a result, use most of the base class methods with little modification. The **Cursor** class has a behavior slightly different where the object moves spontaneously with the mouse without a click. As a result, it has to redefine more of the base class methods. The base class allows for all those objects to be managed in the same framework and thus enables dragging of several objects (possibly of different types) at the same time, and efficient rendering of the motion of these objects through a globally set blitting mode.
+All drapo classes except ClickFig (not described here) use a **base class** named **InteractiveObject** located in the file *interactive_object.py*. The base class is mainly developed for objects that are set in motion when they are selected (picked) by a click, and moved by dragging the object while keeping the mouse pressed, like the **Line** and **Rect** classes. These classes, as a result, use most of the base class methods with little modification. The **Cursor** class has a behavior slightly different where the object moves spontaneously with the mouse without a click. As a result, it has to redefine more of the base class methods. The base class allows for all those objects to be managed in the same framework and thus enables dragging of several objects (possibly of different types) at the same time, and efficient rendering of the motion of these objects through a globally set blitting mode.
 
-important to keep 
+important to keep
 
 ## General structure
 
@@ -22,8 +22,8 @@ important to keep
 The methods and attributes below are common to all subclasses through the base class
 
 ### Instance methods
-    
-- **update_graph(event)** manages the motion of objects in the figure and should only be called by the `cls.leader` object (defined in `initiate_motion`, see below); other objects are drawn with a loop on all `moving_objects`. In subclasses, `update_graph` is typically called in the `on_motion` callback. 
+
+- **update_graph(event)** manages the motion of objects in the figure and should only be called by the `cls.leader` object (defined in `initiate_motion`, see below); other objects are drawn with a loop on all `moving_objects`. In subclasses, `update_graph` is typically called in the `on_motion` callback.
 
 - **initiate motion(event)** needs to be called before `update_graph` to define the leading object, define animated artists on the figure, and store other useful info for motion. In particular, it calls the `set_active_info` method that needs to be defined in the subclass, as well as the `set_press_info` and `set_motion_tracking` methods which are defined in the base class. An exception is for cursors, which are always moving by default, and which deactivate during the motion of other objects (lines, rectangles, etc.). Cursor objects, as a result, are never defined as leaders. `initiate motion` needs to be called in the subclass by another method or callback (typically `on_pick` or `on_press`) that itself already defines which objects will be moving (by adding them to `moving_objects`). Cursor does not use this method.
 
@@ -52,8 +52,8 @@ The methods and attributes below are common to all subclasses through the base c
 
 - **name**: should be also defined for every subclass, as it is used by the default `__repr__` and `__str__` defined in the base class.
 
-- **all_interactives_objects**: stores all interactive objects of any class within ***plov***. Objects are appended to this list during the init of the base class, so there is no need to do anything in the subclasses. In fact, subclasses *should not* define a class attribute with the same name. This attribute is the list returned when calling `cls.all_objects()`. 
- 
+- **all_interactives_objects**: stores all interactive objects of any class within ***drapo***. Objects are appended to this list during the init of the base class, so there is no need to do anything in the subclasses. In fact, subclasses *should not* define a class attribute with the same name. This attribute is the list returned when calling `cls.all_objects()`.
+
 - **moving_objects**: stores all objects (of any class) that need to be updated when calling `update_graph`. Objects are added to this set by `self.initiate_motion()` and removed from this set by `self.reset_after_motion()`. If not using these two initiate/reset methods, the subclass should manage addition and removal to `moving_objects`.
 
 - **leader**: instance of any subclass that is the leading object for synchronized graph updating (see above). It is defined in `initiate_motion`, which blocks any other object to be defined as the leader until the leader is reset to `None`, e.g. when calling `reset_after_motion`.
@@ -100,14 +100,14 @@ To summarize the information above, subclasses need to do the following things:
 
 After modifying code, do at least the following tests to check that the package is still working properly. Start by importing the package. In a python shell, run
 ```python
-import plov
+import drapo
 ```
 
 ### Base class
 
 To test the base class IneractiveObject, run
 ```python
-plov.interactive_object.main()
+drapo.interactive_object.main()
 ```
 
 A blank matplotlib window should open. When clicking or pressing keys on the figure, information on the clicks / keys should be printed in the shell.
@@ -116,7 +116,7 @@ A blank matplotlib window should open. When clicking or pressing keys on the fig
 
 To test the Line class, run
 ```python
-plov.line.main()
+drapo.line.main()
 ```
 This will instantiate various lines on different axes of two figures, with linear and log scales. Verify the following:
 - Dragging works on all axes, in both dragging modes (by clicking on line ends or by clicking on the line itself).
@@ -130,7 +130,7 @@ This will instantiate various lines on different axes of two figures, with linea
 ### Rect class
 To test the Line class, run
 ```python
-plov.rectangle.main()
+drapo.rectangle.main()
 ```
 Testing follows the same procedure as with the Line class. Also try instantiating lines and rectangles in the same axes and drag them separately or at the same time.
 
@@ -141,7 +141,7 @@ Specific things to test for rectangles:
 ### Cursor class and ginput
 To test the Cursor class, run
 ```python
-plov.cursor.main()
+drapo.cursor.main()
 ```
 This will open a figure with two subplots, and with a cursor instantiated by the ginput function, aiming at recording 5 data points from the figure.
 
@@ -157,18 +157,18 @@ Testing follows the same procedure as with the Line/Rect classes, with some othe
 - Verify that left click adds a red cross at the location of the click and that left click anywhere removes the cross.
 - Same for 'a' and 'z' keystrokes.
 - Verify that recording stops after the fifth cross has been added and that a list of 5 tuples is returned in the console.
-- Re-instanciate a ginput Cursor with `plov.cursor.main()` and check that recording can be interrupted by pressing the "enter" key, and that a list of tuples shorter than 5 is returned.
+- Re-instanciate a ginput Cursor with `drapo.cursor.main()` and check that recording can be interrupted by pressing the "enter" key, and that a list of tuples shorter than 5 is returned.
 
 ### Clickfig class
 To test the ClickFig class, run
 ```python
-plov.clickfig.main()
+drapo.clickfig.main()
 ```
 which runs ClickFig with one click allowed; check that hovering the mouse over different figure/axes highlights them in light blue. Click on one of them, then run `plt.plot(1, 2, 'or')` in the console to check that it plots the result in the selected axes.
 
 ### All classes
 
-For all classes, it is useful to also check the following things : 
+For all classes, it is useful to also check the following things :
 - Re-run tests by passing the argument `blit=False` in main() to see if things still work without blitting.
 - Re-run basic tests with other Matplotlib backends: pass the argument `backend='yyy'` where *yyy* is the name of the backend (try e.g. *Qt5Agg*, *Qt4Agg*, *TkAgg*)
 

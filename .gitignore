@@ -1,4 +1,6 @@
-plov.egg-info/
-plov/__pycache__/
 .vscode/
 .eggs/
+*__pycache__*
+*egg-info*
+build/
+dist/
