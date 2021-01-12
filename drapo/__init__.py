@@ -23,3 +23,7 @@ from .rectangle import Rect
 from .rectangle import rinput
 
 from .clickfig import ClickFig
+
+from importlib.metadata import version
+
+__version__ = version('drapo')
