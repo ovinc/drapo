@@ -17,13 +17,13 @@ from .interactive_object import InteractiveObject
 # ================================= Testing ==================================
 
 def main(blit=True, backend=None):  # For testing purposes
+    """ example of instances of Lines in different figures and axes"""
 
     if backend is not None:
         matplotlib.use(backend)
 
-    """ example of instances of Lines in different figures and axes"""
     fig1, ax1 = plt.subplots()
-    tt = np.linspace(0, 4, 100000)
+    tt = np.linspace(0, 4, 10000)
     xx = np.exp(-tt)
     ax1.plot(tt, xx, '-b')
 
@@ -90,8 +90,8 @@ class Line(InteractiveObject):
 
 
     def __init__(self, fig=None, ax=None, pickersize=5, color=None,
-                 ptstyle='.', ptsize=5,linestyle='-', linewidth=1,
-                 avoid_existing = True, blit=True, block=False):
+                 ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
+                 avoid_existing=True, blit=True, block=False):
 
         super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
 
@@ -99,7 +99,7 @@ class Line(InteractiveObject):
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
         self.create(pickersize, self.color, ptstyle, ptsize,
-                   linestyle, linewidth, avoid_existing)
+                    linestyle, linewidth, avoid_existing)
 
         # to prevent any shift in axes limits when instanciating line. The
         self.ax.set_xlim(xlim)
@@ -169,8 +169,8 @@ class Line(InteractiveObject):
 
             while True:
                 for (xb, yb) in dragonax:
-                    d1 = m.hypot(x1-xb, y1-yb)
-                    d2 = m.hypot(x2-xb, y2-yb)
+                    d1 = m.hypot(x1 - xb, y1 - yb)
+                    d2 = m.hypot(x2 - xb, y2 - yb)
                     dmin = min(d1, d2)
                     if dmin < mindist:  # some of the points are too close
                         x1 += -mindist  # shift everything in a parallel manner
@@ -199,7 +199,7 @@ class Line(InteractiveObject):
             active_elements = self.picked_artists
 
         else:  # Normally this case shouldn't happen as this method should
-        # be called only for active objects.
+            # be called only for active objects.
             mode = None
             active_pts = None
 
@@ -244,10 +244,13 @@ class Line(InteractiveObject):
 
 # ============================ callback functions ============================
 
+
     def on_key_press(self, event):
         pass
 
+
 # ================================ direct run ================================
+
 
 if __name__ == '__main__':
     main()

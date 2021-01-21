@@ -41,8 +41,8 @@ class InteractiveObject:
     # Define default colors of the class (potentially cycled through by some
     # methods. If user specifies a color not in the list, it is added to the
     # class colors.
-    white = '#eeeeee' # not completely white so that it is still visible
-    black = '#111111' # same in case of black background
+    white = '#eeeeee'  # not completely white so that it is still visible
+    black = '#111111'  # same in case of black background
     colors = [black, 'r', 'b', 'g', white]
 
 
@@ -58,11 +58,11 @@ class InteractiveObject:
         # Tracks instances of any interactive objects of any subclass.
         self.all_interactive_objects.append(self)
 
-        self.all_artists = [] # all artists the object is made of
+        self.all_artists = []  # all artists the object is made of
         self.all_pts = []  # all individual tracking points the object is made of
 
         # set that stores info about what artists are picked
-        self.picked_artists = set() # they can be different frmo the active
+        self.picked_artists = set()  # they can be different from the active
         # artists, because e.g. when a line moves as a whole, only the line
         # is picked, but the two edge points need to be moving/active as well.
 
@@ -108,8 +108,8 @@ class InteractiveObject:
         return f'{name} #{n}/{n_on_fig} in Fig. {self.fig.number}.'
 
     def __str__(self):
-        #name = self.__class__.name
-        #return f'{name} on Fig. {self.fig.number}.'
+        # name = self.__class__.name
+        # return f'{name} on Fig. {self.fig.number}.'
         return self.__repr__()
 
 # ================================== methods =================================
@@ -212,8 +212,8 @@ class InteractiveObject:
 
         for pt in self.all_pts:
             xpt, ypt = self.get_pt_position(pt, 'px')
-            press_info[pt] = xpt, ypt # position of all object pts during click
-            moving_positions[pt] =  xpt, ypt # will be updated during motion
+            press_info[pt] = xpt, ypt  # position of all object pts during click
+            moving_positions[pt] = xpt, ypt  # will be updated during motion
 
         self.press_info = press_info
         self.moving_positions = moving_positions
@@ -341,6 +341,7 @@ class InteractiveObject:
 
 # ================= connect/disconnect events and callbacks ==================
 
+
     def connect(self):
         """connect object to figure canvas events"""
         # mouse events
@@ -352,16 +353,16 @@ class InteractiveObject:
                                                    self.on_pick)
         self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event',
                                                      self.on_motion)
-        #key events
+        # key events
         self.cidpressk = self.fig.canvas.mpl_connect('key_press_event',
                                                      self.on_key_press)
         self.cidreleasek = self.fig.canvas.mpl_connect('key_release_event',
-                                                     self.on_key_release)
+                                                       self.on_key_release)
         # figure events
         self.cidfigenter = self.fig.canvas.mpl_connect('figure_enter_event',
-                                                      self.on_enter_figure)
+                                                       self.on_enter_figure)
         self.cidfigleave = self.fig.canvas.mpl_connect('figure_leave_event',
-                                                      self.on_leave_figure)
+                                                       self.on_leave_figure)
         self.cidaxenter = self.fig.canvas.mpl_connect('axes_enter_event',
                                                       self.on_enter_axes)
         self.cidaxleave = self.fig.canvas.mpl_connect('axes_leave_event',
@@ -392,7 +393,9 @@ class InteractiveObject:
 
 # ============================ callback functions ============================
 
+
     # mouse events  ----------------------------------------------------------
+
 
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
@@ -427,6 +430,7 @@ class InteractiveObject:
 
 
     # key events  ------------------------------------------------------------
+
 
     def on_key_press(self, event):
         print(f'Key Press: {event.key}')

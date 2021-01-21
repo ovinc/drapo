@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 # ================================= Testing ==================================
 
 def main(backend=None):
-    
+
     if backend is not None:
         matplotlib.use(backend)
 
@@ -28,21 +28,21 @@ def main(backend=None):
     fig2, ax3 = plt.subplots()
 
     ax3.plot(1, 1, '+r')
-    
+
     plt.show(block=False)
-    
+
     ClickFig()
-    
-    
+
+
 # ================================ Line class ================================
 
 
 class ClickFig:
     """Mouse that activates figures and axes by hovering and clicking.
-    
+
     - Left Click on figure / axes to make them the current ones in Matplotlib.
     - Right Click anywhere to deactivate the interactive mouse.
-    
+
     Parameters
     ----------
     - n (int, default 1): maximum number of clicks allowed.
@@ -51,29 +51,29 @@ class ClickFig:
 
     fig_selectcolor = '#F3F8FA'
     ax_selectcolor = '#ECF4F8'
-    
+
     clickfigs = []  # tracks all instances of ClickFig
 
     def __init__(self, n=1, highlight=True):
-        
+
         self.figs = ClickFig.list_figures()
-        
+
         self.n = n
         self.highlight = highlight
-              
+
         if len(self.figs) > 0:
-            
+
             self.active_fig = plt.gcf()
             self.active_ax = plt.gca()
-            
+
             self.fig_colors, self.ax_colors = self.list_bgcolors()
-            
+
             self.clicknumber = 0
-            
+
             ClickFig.clickfigs.append(self)
-            
+
             self.connect()
-            
+
         else:
             raise FigureError("No existing Matplotlib figure!")
 
@@ -96,12 +96,13 @@ class ClickFig:
                 ax_colors[ax] = ax.get_facecolor()
 
         return fig_colors, ax_colors
-    
+
     def erase(self):
         self.disconnect()
-        
-        
+
+
 # ============================ callback functions ============================
+
 
     def on_fig_enter(self, event):
         if self.highlight is True:
@@ -127,54 +128,55 @@ class ClickFig:
         if self.highlight is True:
             fig = event.canvas.figure
             ax = event.inaxes
-            original_color = self.ax_colors[ax] 
+            original_color = self.ax_colors[ax]
             ax.set_facecolor(original_color)
             fig.canvas.draw()
 
     def on_press(self, event):
         fig = event.canvas.figure
         ax = event.inaxes
-    
+
         if event.button == 1:  # left click : activate ax/fig
-            
+
             self.clicknumber += 1
-            
+
             # activate clicked figure as the current figure.
             fnum = fig.number
             plt.figure(fnum)
-            
+
             # activate clicked axes as the current axes.
             if ax is None:
                 print('\nActive Figure defined, no Axes on click location.')
             else:
                 plt.sca(ax)
                 print('\nActive Figure and Axes defined.')
-                
-        # right click or reached max click number: deactivate interactive mouse       
+
+        # right click or reached max click number: deactivate interactive mouse
         if event.button == 3 or self.clicknumber == self.n:
-            
-            original_color = self.fig_colors[fig] 
+
+            original_color = self.fig_colors[fig]
             fig.set_facecolor(original_color)
             fig.canvas.draw()
-            
+
             if ax is not None:
-                original_color = self.ax_colors[ax] 
+                original_color = self.ax_colors[ax]
                 ax.set_facecolor(original_color)
                 fig.canvas.draw()
-            
+
             if event.button == 3:
                 print('\nClickFig deactivated (left click).')
             else:
                 print('\nClickFig deactivated (max number of clicks reached).')
-            
+
             self.erase()
-                  
+
     def on_close(self, event):
         pass
         # self.erase()
-        
-        
+
+
 # ================= connect/disconnect events and callbacks ==================
+
 
     def connect(self):
         """Connect mouse events to all existing figures"""
@@ -195,15 +197,17 @@ class ClickFig:
             fig.canvas.mpl_disconnect(self.leaveax_id)
             fig.canvas.mpl_disconnect(self.pressb_id)
             fig.canvas.mpl_disconnect(self.close_id)
-            
+
 
 # =========================== custom Figure Error ============================
-        
+
 class FigureError(Exception):
     """Raised when there are no existing figures."""
     pass
 
+
 # ================================ direct run ================================
+
 
 if __name__ == '__main__':
     main()

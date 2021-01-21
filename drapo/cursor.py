@@ -23,10 +23,10 @@ from .interactive_object import InteractiveObject
 
 
 def main(blit=True, backend=None):  # for testing purposes
-    
+
     if backend is not None:
         matplotlib.use(backend)
-        
+
     """ Example of use."""
     x = [0, 1, 2, 3, 4]
     y = [4, 7, 11, 18, 33]
@@ -43,7 +43,7 @@ def main(blit=True, backend=None):  # for testing purposes
     data = ginput(5, blit=blit)
     print(data)
 
-   
+
 # =============================== Cursor class ===============================
 
 
@@ -101,11 +101,11 @@ class Cursor(InteractiveObject):
     - `clickdata`: stores the (x, y) data of clicks in a list.
     - `marks`: list of matplotlib artists containing all click marks drawn.
     """
-    
+
     name = 'Cursor'
-    
-    
-    def __init__(self, fig=None, color='r', linestyle=':', linewidth=1, 
+
+
+    def __init__(self, fig=None, color='r', linestyle=':', linewidth=1,
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
@@ -124,7 +124,7 @@ class Cursor(InteractiveObject):
         self.width = linewidth
         self.marksymbol = mark_symbol
         self.marksize = mark_size
-        
+
         # Recording click options
         self.markclicks = show_clicks
         self.recordclicks = record_clicks
@@ -137,9 +137,9 @@ class Cursor(InteractiveObject):
         self.n = n  # maximum number of clicks, after which cursor is deactivated
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
-        
+
         self.fig.canvas.draw()
-        
+
         # the blocking option below needs to be after connect()
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)
@@ -166,7 +166,7 @@ class Cursor(InteractiveObject):
         if self.recordclicks:
             add_message += f'Positions of clicks with the {button} button is recorded in the clickdata attribute.'
         else:
-            add_message += f'Positions of clicks not recorded.'
+            add_message += 'Positions of clicks not recorded.'
 
         return base_message + ' ' + add_message
 
@@ -180,8 +180,8 @@ class Cursor(InteractiveObject):
         ax = self.ax
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
-        
-        self.delete_others('fig') # delete all other existing cursors on the figure
+
+        self.delete_others('fig')  # delete all other existing cursors on the figure
 
         x, y = event.xdata, event.ydata
         # horizontal and vertical cursor lines, the animated option is for blitting
@@ -195,11 +195,11 @@ class Cursor(InteractiveObject):
         # because plotting the lines can change the initial xlim, ylim
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
-        
+
         self.all_artists = hline, vline
         # Note: addition to all_objects is made automatically by InteractiveObject parent class
         self.__class__.moving_objects.add(self)
-        
+
         # Below is for cursor to be visible upon creation
         if self.__class__.blit:
             self.fig.canvas.blit(self.ax.bbox)
@@ -212,22 +212,22 @@ class Cursor(InteractiveObject):
 
         x = event.xdata  # For cursors it is sufficient to work with data coordinates
         y = event.ydata  # (no need to go to pixels as the cursor is always in axes)
-        
+
         hline, vline = self.all_artists
-    
+
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = self.ax.get_xlim()
         ymin, ymax = self.ax.get_ylim()
-      
+
         hline.set_xdata([xmin, xmax])
         hline.set_ydata([y, y])
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
-        
-        
+
+
     def set_press_info(self, event):
-        self.press_info = {'currently_pressed': True, 
-                      'click_position': (event.xdata, event.ydata)}
+        self.press_info = {'currently_pressed': True,
+                           'click_position': (event.xdata, event.ydata)}
 
 
     def erase_marks(self):
@@ -235,13 +235,13 @@ class Cursor(InteractiveObject):
         for mark in self.marks:
             mark.remove()
         self.fig.canvas.draw()
-        
+
 
     def erase_data(self):
         """Erase data of recorded clicks"""
         self.clickdata = []
-        
-    
+
+
     def add_point(self, pos):
         """Add point to the click data (triggered by click or key press)"""
         x, y = pos
@@ -257,7 +257,7 @@ class Cursor(InteractiveObject):
 
 
     def remove_point(self):
-        """Add point to the click data (triggered by click or key press)"""            
+        """Add point to the click data (triggered by click or key press)"""
         if self.recordclicks:
             if self.clicknumber == 0:
                 pass
@@ -282,41 +282,41 @@ class Cursor(InteractiveObject):
         self.inaxes = True
         self.ax = event.inaxes
         if self.visible:
-            self.create(event)    
+            self.create(event)
         if self.__class__.blit:
             self.__class__.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
-            
+
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
         self.inaxes = False
         if self.visible and not self.press_info['currently_pressed']:
             self.erase()
-            
+
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
         # do nothing if pressed to avoid weird interactions with panning
         if self.visible and self.inaxes and not self.press_info['currently_pressed']:
             self.update_graph(event)
-        
+
 
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
         self.set_press_info(event)
         if self.visible and self.inaxes:
-             self.erase()
-        
-        
+            self.erase()
+
+
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
 
         This is in order to accommodate potential zooming/panning.
-        """  
+        """
         self.press_info['currently_pressed'] = False
         if self.visible and self.inaxes:
             self.create(event)
-            
+
         # I don't understand why I need to do the hack below to not have a
         # strange re-appearance of the background before zooming (panning is ok)
         # when the mouse go into motion again (not rightaway). Even more
@@ -324,7 +324,7 @@ class Cursor(InteractiveObject):
         # directly here, it does not work.
         self.__class__.initiating_motion = True  # to reactivate cursor
 
-        # See if click needs to be recorded.        
+        # See if click needs to be recorded.
 
         x, y = (event.xdata, event.ydata)
         # line below avoids recording clicks during panning/zooming
@@ -339,7 +339,7 @@ class Cursor(InteractiveObject):
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
-                
+
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -357,16 +357,16 @@ class Cursor(InteractiveObject):
         commands_color = ['shift+right', 'shift+left']  # keys to change color
         commands_width = ['shift+up', 'shift+down']
 
-        if event.key == " ":  # Space Bar     
-            if self.inaxes: # create or delete cursor only if it's in axes
+        if event.key == " ":  # Space Bar
+            if self.inaxes:  # create or delete cursor only if it's in axes
                 self.erase() if self.visible else self.create(event)
             self.visible = not self.visible  # always change visibility status
-            
+
         if event.key == commands_width[0]:
             self.width += 0.5
 
         if event.key == commands_width[1]:
-            self.width = self.width-0.5 if self.width > 0.5 else 0.5
+            self.width = self.width - 0.5 if self.width > 0.5 else 0.5
 
         if event.key in commands_color:
             # finds at which position the current color is in the list
@@ -388,25 +388,25 @@ class Cursor(InteractiveObject):
 
         if event.key == 'a':
             self.add_point((x, y))
-            
+
         # I use 'z' here because backspace (as used in ginput) interferes
         # with the interactive "back" option in matplotlib
         elif event.key == 'z':
             self.remove_point()
-            
+
 # --------------------implement changes on graph -----------------------------
-        
+
         # hack to see changes directly and to prevent display bugs
         self.__class__.initiating_motion = True
         self.update_graph(event)
-          
+
 # ------------------------ stop if necessary ---------------------------------
 
         if self.clicknumber == self.n or event.key == 'enter':
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
-            
-            
+
+
     def on_pick(self, event):
         """Contrary to draggble objects, no self-picking here."""
         pass
@@ -419,12 +419,12 @@ def ginput(n=1, timeout=0, show_clicks=True,
            mouse_add=1, mouse_pop=3, mouse_stop=2,
            blit=True):
     """Improved ginput function (graphical data input) compared to Matplotlib's.
-    
-    In particular, a cursor helps for precise clicking and zooming/panning 
-    do not add extra click data. 
 
-    Key shortcuts and mouse clicks follow the Cursor class behavior, 
-    in particular the key shortcuts are `a`, `z`, `enter` instead of 
+    In particular, a cursor helps for precise clicking and zooming/panning
+    do not add extra click data.
+
+    Key shortcuts and mouse clicks follow the Cursor class behavior,
+    in particular the key shortcuts are `a`, `z`, `enter` instead of
     any key, backspace and enter. See Cursor class documentation for more info.
     All Cursor class interactive features are usable.
 

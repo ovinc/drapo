@@ -105,7 +105,7 @@ class Rect(InteractiveObject):
         # Create all lines (edges) of the rectangle --------------------------
         lines = []
         for i, pos in enumerate(corner_positions):
-            x1, y1 = corner_positions[i-1]
+            x1, y1 = corner_positions[i - 1]
             x2, y2 = pos
             line, = self.ax.plot([x1, x2], [y1, y2], c=color,
                                  picker=True, pickradius=pickersize,
@@ -132,7 +132,7 @@ class Rect(InteractiveObject):
         xmax, ymax = self.datatopx((xmax, ymax))
 
         if position is None:
-            w, h = .5, .5 # relative initial width/height of rectangle in axes
+            w, h = .5, .5  # relative initial width/height of rectangle in axes
             x_left = (1 - w) / 2 * (xmax - xmin) + xmin
             x_right = (1 + w) / 2 * (xmax - xmin) + xmin
             y_low = (1 - h) / 2 * (ymax - ymin) + ymin
@@ -167,7 +167,7 @@ class Rect(InteractiveObject):
         except ValueError:
             raise ValueError('Impossible to get position of Rect, probably '
                              'because it has been deleted from the figure or '
-                              'because figure itself has been closed.')
+                             'because figure itself has been closed.')
         w, h = xmax - xmin, ymax - ymin
         return xmin, ymin, w, h
 
@@ -194,11 +194,11 @@ class Rect(InteractiveObject):
 
                 i = lines.index(pickedline)
                 # Distinguish whether line picked is vertical or horizontal
-                mode = 'horz_edge' if i%2 else 'vert_edge'
+                mode = 'horz_edge' if i % 2 else 'vert_edge'
 
                 # neighbors of that line
-                inext = (i+1)%4
-                iprev = (i-1)%4
+                inext = (i + 1) % 4
+                iprev = (i - 1) % 4
                 active_lines = [pickedline, lines[inext], lines[iprev]]
 
                 # points connected to that line
@@ -213,8 +213,8 @@ class Rect(InteractiveObject):
                     mode = i
 
             i = mode
-            iprev = (i-1)%4
-            inext = (i+1)%4
+            iprev = (i - 1) % 4
+            inext = (i + 1) % 4
 
             active_pts = [corners[i], corners[iprev], corners[inext], center]
             active_lines = lines  # all lines need to be updated in corner motion
@@ -222,9 +222,9 @@ class Rect(InteractiveObject):
         else:  # Normally, this should not happen
             mode = None
 
-        self.active_info =  {'active_pts': active_pts,
-                             'active_lines': active_lines,
-                             'mode': mode}
+        self.active_info = {'active_pts': active_pts,
+                            'active_lines': active_lines,
+                            'mode': mode}
 
 
     def update_position(self, event):
@@ -252,7 +252,7 @@ class Rect(InteractiveObject):
                 if pt != center:
                     x_new, y_new = x0_pt + dx, y0_pt + dy
                 else:   # center point
-                    norm = 1 if mode =='center' else 0.5
+                    norm = 1 if mode == 'center' else 0.5
                     x_new = x0_pt + dx * norm
                     y_new = y0_pt + dy * norm
                 self.moving_positions[pt] = x_new, y_new
@@ -261,15 +261,15 @@ class Rect(InteractiveObject):
 
             i = mode
             picked_corner = corners[i]
-            next_corner = corners[(i+1)%4]
-            prev_corner = corners[(i-1)%4 ]
-            opposite_corner = corners[(i+2)%4 ]
+            next_corner = corners[(i + 1) % 4]
+            prev_corner = corners[(i - 1) % 4]
+            opposite_corner = corners[(i + 2) % 4]
 
             self.moving_positions[picked_corner] = x, y
             xprev, yprev = self.moving_positions[prev_corner]
             xnext, ynext = self.moving_positions[next_corner]
 
-            if i%2:  # bottom right corner or top left
+            if i % 2:  # bottom right corner or top left
                 self.moving_positions[prev_corner] = xprev, y
                 self.moving_positions[next_corner] = x, ynext
             else:  # bottom left or top right corner
@@ -289,12 +289,13 @@ class Rect(InteractiveObject):
 
         for line in active_lines:
             i = lines.index(line)
-            x1, y1 = self.pxtodata(self.moving_positions[corners[i-1]])
+            x1, y1 = self.pxtodata(self.moving_positions[corners[i - 1]])
             x2, y2 = self.pxtodata(self.moving_positions[corners[i]])
             line.set_data([x1, x2], [y1, y2])
 
 
 # ============================ callback functions ============================
+
 
     def on_key_press(self, event):
         if event.key == 'enter':
@@ -325,8 +326,8 @@ def rinput():
     return position
 
 
-
 # ================================ direct run ================================
+
 
 if __name__ == '__main__':
     main()

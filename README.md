@@ -91,7 +91,8 @@ If the package does not work, try the following hacks:
 
 ## Packages
 
-- matplotlib (automatically installed by pip if necessary)
+- matplotlib
+- importlib-metadata
 - numpy (optional, only needed to run the examples present in the main() functions)
 
 ## Python

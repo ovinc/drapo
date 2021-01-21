@@ -24,6 +24,6 @@ from .rectangle import rinput
 
 from .clickfig import ClickFig
 
-from importlib.metadata import version
+from importlib_metadata import version
 
 __version__ = version('drapo')
