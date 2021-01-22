@@ -46,7 +46,7 @@ class Line(InteractiveObject):
     name = 'Draggable Line'
 
     def __init__(self, fig=None, ax=None, pickersize=5, color=None, c=None,
-                 ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
+                 ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
                  avoid_existing=True, blit=True, block=False):
 
         super().__init__(fig=fig, ax=ax, color=color, c=c,
@@ -88,6 +88,7 @@ class Line(InteractiveObject):
                              linestyle=linestyle, linewidth=linewidth)
 
         # assemble lines and pts into "all" ----------------------------------
+        self.link = link
         self.all_artists = pt1, pt2, link
         self.all_pts = pt1, pt2
 
@@ -147,14 +148,10 @@ class Line(InteractiveObject):
 
     def set_active_info(self):
         """Set active/inactive points during motion and detect motion mode."""
-        pts = self.all_artists[:2]
-        line = self.all_artists[2]
 
-        # set which points are active and corresponding motion mode ----------
-
-        if len(self.picked_artists) == 1 and line in self.picked_artists:
-            # only the line is selected --> move as a whole, make both pts active
-            active_pts = set(pts)
+        if len(self.picked_artists) == 1 and self.link in self.picked_artists:
+            # only the line is selected --> move as a whole, make both self.pts active
+            active_pts = set(self.all_pts)
 
         else:
             # in all other cases, the points that need to be active are
@@ -163,7 +160,7 @@ class Line(InteractiveObject):
             # they overlap), move the whole thing as a whole again. If nothing
             # is picked, nothing happens (should not happen because the current
             # method is only called for active objects)
-            active_pts = set(self.picked_artists) - {line}
+            active_pts = set(self.picked_artists) - {self.link}
 
         npts = len(active_pts)
 

@@ -45,7 +45,7 @@ class Rect(InteractiveObject):
     name = "Draggable Rectangle"
 
     def __init__(self, fig=None, ax=None, position=None, pickersize=5, c=None,
-                 color=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
+                 color=None, ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
                  blit=True, block=False, timeout=0):
 
         super().__init__(fig=fig, ax=ax, color=color, c=c,
@@ -92,6 +92,12 @@ class Rect(InteractiveObject):
                                  linestyle=linestyle, linewidth=linewidth)
             lines.append(line)
 
+        # Define useful collections of lines / pts ---------------------------
+
+        self.corners = corners
+        self.edges = lines
+        self.center = center
+
         self.all_artists = (*corners, *lines, center)
         self.all_pts = (*corners, center)
 
@@ -121,7 +127,6 @@ class Rect(InteractiveObject):
         corner 0   --------------------- corner 1
                            line 1
         """
-
         xmin, xmax = self.ax.get_xlim()
         ymin, ymax = self.ax.get_ylim()
 
@@ -194,20 +199,14 @@ class Rect(InteractiveObject):
 
     def _set_center_mode(self):
         """Given a selected line index, determine mode and active lines/pts."""
-        lines = self.all_artists[4:-1]
-
         self.active_info = {'pts': self.all_pts,
-                            'lines': lines,
+                            'lines': self.edges,
                             'mode': 'center'}
 
     def _set_edge_mode(self, iline):
         """Given a selected line index, determine mode and active lines/pts."""
 
-        corners = self.all_artists[:4]  # not all_pts, which can contain additional tracking pts
-        lines = self.all_artists[4:-1]
-        center = self.all_artists[-1]
-
-        line = lines[iline]
+        line = self.edges[iline]
 
         # Distinguish whether line picked is vertical or horizontal
         mode = 'horz_edge' if iline % 2 else 'vert_edge'
@@ -215,10 +214,10 @@ class Rect(InteractiveObject):
         # neighbors of that line
         inext = (iline + 1) % 4
         iprev = (iline - 1) % 4
-        active_lines = [line, lines[inext], lines[iprev]]
+        active_lines = [line, self.edges[inext], self.edges[iprev]]
 
         # points connected to that line
-        active_pts = [corners[iprev], corners[iline], center]
+        active_pts = [self.corners[iprev], self.corners[iline], self.center]
 
         self.active_info = {'pts': active_pts,
                             'lines': active_lines,
@@ -227,37 +226,27 @@ class Rect(InteractiveObject):
     def _set_corner_mode(self, icorner):
         """Given a selected corner, figure out active lines/pts."""
 
-        corners = self.all_artists[:4]  # not all_pts, which can contain additional tracking pts
-        lines = self.all_artists[4:-1]
-        center = self.all_artists[-1]
-
         iprev = (icorner - 1) % 4
         inext = (icorner + 1) % 4
 
-        active_pts = [corners[icorner], corners[iprev], corners[inext], center]
-        active_lines = lines  # all lines need to be updated in corner motion
-        mode = icorner  # in the corner mode, the mode is identidied by its number
+        active_pts = [self.corners[icorner], self.corners[iprev],
+                      self.corners[inext], self.center]
+        active_lines = self.edges  # all lines need to be updated in corner motion
 
         self.active_info = {'pts': active_pts,
                             'lines': active_lines,
-                            'mode': mode}
+                            'mode': icorner}
 
     def set_active_info(self):
         """Set active/inactive points during motion and detect motion mode."""
 
-        corners = self.all_artists[:4]  # not all_pts, which can contain additional tracking pts
-        lines = self.all_artists[4:-1]
-        center = self.all_artists[-1]
-
-        # set which points are active and corresponding motion mode ----------
-
-        if center in self.picked_artists:
+        if self.center in self.picked_artists:
             # center has been picked --> solid body motion
             self._set_center_mode()
 
         else:
             # Need to figure out which lines and corners have been picked
-            picked_corners = set.intersection(self.picked_artists, corners)
+            picked_corners = set.intersection(self.picked_artists, self.corners)
             ncorners = len(picked_corners)
 
             if ncorners > 2:
@@ -268,30 +257,30 @@ class Rect(InteractiveObject):
             elif ncorners == 2:
                 # This is also an overlapping situation where two corners
                 # correponding to an edge are selected --> edge motion
-                icorners = [corners.index(pt) for pt in picked_corners]
+                icorners = [self.corners.index(pt) for pt in picked_corners]
                 iline = self.corners_to_edge(*icorners)
                 self._set_edge_mode(iline)
 
             elif ncorners == 1:
                 # Just one corner picked: corner motion, move corresponding two edges
                 corner, = picked_corners
-                icorner = corners.index(corner)
+                icorner = self.corners.index(corner)
                 self._set_corner_mode(icorner)
 
             else:
                 # No corner picked, but there might have been an edge line or more
-                picked_lines = set.intersection(self.picked_artists, lines)
+                picked_lines = set.intersection(self.picked_artists, self.edges)
                 nlines = len(picked_lines)
 
                 if nlines == 1:
                     # Just one line: edge motion with that line
                     line, = picked_lines
-                    i = lines.index(line)
+                    i = self.edges.index(line)
                     self._set_edge_mode(i)
 
                 elif nlines == 2:
                     # Two lines (and for some reason no corner): corner mode
-                    ilines = [lines.index(line) for line in picked_lines]
+                    ilines = [self.edges.index(line) for line in picked_lines]
                     icorner = self.edges_to_corner(*ilines)
                     self._set_corner_mode(icorner)
 
@@ -309,10 +298,6 @@ class Rect(InteractiveObject):
 
         x, y = event.x, event.y  # pixel positions
 
-        corners = self.all_artists[:4]  # not all_pts which can contain additional tracking pts
-        lines = self.all_artists[4:-1]
-        center = self.all_artists[-1]
-
         active_pts = self.active_info['pts']
         active_lines = self.active_info['lines']
         mode = self.active_info['mode']
@@ -326,7 +311,7 @@ class Rect(InteractiveObject):
 
             for pt in active_pts:
                 x0_pt, y0_pt = self.press_info[pt]
-                if pt != center:
+                if pt != self.center:
                     x_new, y_new = x0_pt + dx, y0_pt + dy
                 else:   # center point
                     norm = 1 if mode == 'center' else 0.5
@@ -337,10 +322,10 @@ class Rect(InteractiveObject):
         elif mode in range(4):  # corner motion
 
             i = mode
-            picked_corner = corners[i]
-            next_corner = corners[(i + 1) % 4]
-            prev_corner = corners[(i - 1) % 4]
-            opposite_corner = corners[(i + 2) % 4]
+            picked_corner = self.corners[i]
+            next_corner = self.corners[(i + 1) % 4]
+            prev_corner = self.corners[(i - 1) % 4]
+            opposite_corner = self.corners[(i + 2) % 4]
 
             self.moving_positions[picked_corner] = x, y
             xprev, yprev = self.moving_positions[prev_corner]
@@ -356,7 +341,7 @@ class Rect(InteractiveObject):
             # Calculate center pos from picked pt and diagonally opposed one
             x1, y1 = self.moving_positions[picked_corner]
             x2, y2 = self.moving_positions[opposite_corner]
-            self.moving_positions[center] = (x1 + x2) / 2, (y1 + y2) / 2
+            self.moving_positions[self.center] = (x1 + x2) / 2, (y1 + y2) / 2
 
         # now apply the changes to the graph ---------------------------------
         for pt in active_pts:
@@ -364,9 +349,9 @@ class Rect(InteractiveObject):
             pt.set_data(xnew, ynew)
 
         for line in active_lines:
-            i = lines.index(line)
-            x1, y1 = self.pxtodata(self.moving_positions[corners[i - 1]])
-            x2, y2 = self.pxtodata(self.moving_positions[corners[i]])
+            i = self.edges.index(line)
+            x1, y1 = self.pxtodata(self.moving_positions[self.corners[i - 1]])
+            x2, y2 = self.pxtodata(self.moving_positions[self.corners[i]])
             line.set_data([x1, x2], [y1, y2])
 
 # ============================ callback functions ============================
