@@ -108,9 +108,11 @@ This will open several windows with interactive objects one can interact with. T
 
 (Note: the test uses the *Qt5Agg* backend by default and switches to `TkAgg` if the first one is not available).
 
-One can also run the demo:
+One can also run the demo (backend and blitting options available):
 ```bash
 python -m drapo.demo
+python -m drapo.demo --backend TkAgg
+python -m drapo.demo --blit False
 ```
 
 After modifying code, do at least the following tests to check that the package is still working properly. Start by importing the package. In a python shell, run

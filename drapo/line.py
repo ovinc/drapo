@@ -19,7 +19,6 @@ class Line(InteractiveObject):
     ----------
     All parameters optional so that a line can simply be created by `Line()`.
 
-    - `pos` (4-tuple, default: (.2, .2, .8, .8)). Initial position in axes.
     - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - 'pickersize' (float, default: 5), tolerance for line picking.

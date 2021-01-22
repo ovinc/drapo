@@ -275,7 +275,7 @@ class Rect(InteractiveObject):
 # ======================== function rinput ===================================
 
 
-def rinput():
+def rinput(blit=True):
     """Select area of figure with interactive rectangle (enter to validate).
 
     Parameters
@@ -286,7 +286,7 @@ def rinput():
     -------
     4-tuple (xmin, ymin, width, height) of data coordinates.
     """
-    r = Rect(block=True)
+    r = Rect(block=True, blit=blit)
     try:
         position = r.recorded_position
     except AttributeError:

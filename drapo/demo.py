@@ -1,5 +1,6 @@
 """Demo of several objects, functions and their features."""
 
+import argparse
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -34,6 +35,8 @@ def demo_figure():
 def demo(blit=True, backend=None):
     """Example of various objects in different figures and axes (for testing)."""
 
+    print(blit, backend)
+
     if backend is not None:
         matplotlib.use(backend)
 
@@ -42,10 +45,12 @@ def demo(blit=True, backend=None):
     fig, (ax1, ax2) = demo_figure()
 
     fig.suptitle('Cursor() and ginput()', fontsize=16)
-    data = ginput(4)
+    data = ginput(4, blit=blit)
+    print(f'{len(data)} recorded clicks: ', data)
 
     fig.suptitle('Rect() and rinput()', fontsize=16)
     data = rinput()
+    print('recorded rectangle (x, y, w, h): ', data)
 
     fig.suptitle('Line()', fontsize=16)
     Line(c='k', linewidth=2, ptstyle='s', ptsize=8)
@@ -56,4 +61,20 @@ def demo(blit=True, backend=None):
 
 
 if __name__ == '__main__':
-    demo()
+
+    descr = "Run demo for drapo, with backend and blitting options."
+
+    parser = argparse.ArgumentParser(description=descr,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+
+    msg = "(str): Matplotlib backend (e.g. 'TkAgg', 'Qt5Agg', 'MacOSX', etc.)"
+    parser.add_argument('-B', '--backend', type=str, help=msg)
+
+    msg = "(True or False): use blitting for fast rendering (default True)"
+    parser.add_argument('-b', '--blit', type=str, default='True', help=msg)
+
+    args = parser.parse_args()
+
+    blit = True if args.blit == 'True' else False
+
+    demo(blit=blit, backend=args.backend)

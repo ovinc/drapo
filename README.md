@@ -40,6 +40,7 @@ For a brief demo of various objects:
 ```bash
 python -m drapo.demo
 ```
+(it is possible to specify a backend and/or to turn on/off blitting using the `--backend` and `--blit` flags, see help with `python -m drapo.demo -h`)
 
 To use individual objects and functions:
 
