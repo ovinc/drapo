@@ -253,7 +253,8 @@ position = rinput():
 ```
 
 ### Parameters
-None at the moment. Options will be added soon.
+
+Same as `Rect()` except that `block` is automatically set to `True`.
 
 ### Returns
 4-tuple (xmin, ymin, width, height) of data coordinates.

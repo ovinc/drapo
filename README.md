@@ -4,7 +4,7 @@
 
 Based on these tools, the package also provides graphical input functions for measuring/extracting data interactively from a figure, such as ginput (get location of clicks) and rinput (get region of interest from interactive rectangle).
 
-Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`). The *MacOSX* backend can cause problems (see below).
+Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`). The *MacOSX* backend can cause problems (see *Tips and Troubleshooting* below).
 
 ### Draggable shapes
 - **Line** is a class that creates a draggable line.
@@ -88,12 +88,25 @@ Sometimes the current figure/axes are not the ones where one wants to create the
 
 # Tips and Troubleshooting
 
-If the package does not work, try the following hacks:
-- If instantiating from the command line, Matplotlib figures need to not block the console. For this, use `plt.show(block=False)` when creating the figure.
-- Try another interactive action on the figure such as zooming/panning to see if it makes the objects miraculously appear.
-- Use a different matplotlib backend. In particular, *MacOSX* seem to cause problems where nothing is drawn or where the figure crashes. Try e.g. `matplotlib.use('Qt5Agg')`, `matplotlib.use('Qt4Agg')` or `matplotlib.use('TkAgg')`.
+## Tips
+
+- When instantiating an object from the command line on an existing figure, Matplotlib figures need to not block the console. For this, use `plt.show(block=False)` when creating the figure.
+
+- If selecting objects is difficult, either increase the `pickersize` property, or upgrade drapo and/or Matplotlib (see *Requirements* below).
+
+## General issues
+
+If encountering problems, try the following:
+
+- Use a different matplotlib backend, e.g. `matplotlib.use('Qt5Agg')`, `matplotlib.use('Qt4Agg')` or `matplotlib.use('TkAgg')`.
+
 - Similarly, in Jupyter, an interactive backend needs to be used, with the command `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`).
+
 - Pass `blit=False` in the argument of any class or function (except ClickFig) to see if the problem comes from the blitting strategy used for fast rendering.
+
+## MacOSX issues
+
+The *MacOSX* backend of Matplotlib seems to cause problems where the figure crashes, or objects get duplicated on the figure, among other things. If encountering problems on a Mac, usually they are solved by either turning off blitting for fast rendering, or by choosing a different backend (see above).
 
 # Requirements
 
@@ -102,6 +115,8 @@ If the package does not work, try the following hacks:
 - matplotlib
 - importlib-metadata
 - numpy (optional, only needed to run demos and examples)
+
+**Note**: a bug in drapo < 1.0.5 makes it very difficult to select objects when using Matplotlib <3.3. This has been corrected in drapo <= 1.0.5.
 
 ## Python
 

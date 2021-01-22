@@ -366,18 +366,21 @@ class Rect(InteractiveObject):
 # ======================== function rinput ===================================
 
 
-def rinput(blit=True):
+def rinput(**kwargs):
     """Select area of figure with interactive rectangle (enter to validate).
 
     Parameters
     ----------
-    None at the moment. Options will be added soon.
+    Same as drapo.Rect(), but block remains always True by default
 
     Returns
     -------
     4-tuple (xmin, ymin, width, height) of data coordinates.
     """
-    r = Rect(block=True, blit=blit)
+    if 'block' in kwargs:
+        kwargs.pop('block')
+
+    r = Rect(block=True, **kwargs)
     try:
         position = r.recorded_position
     except AttributeError:
