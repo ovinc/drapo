@@ -49,13 +49,15 @@ def demo(blit=True, backend=None):
     print(f'{len(data)} recorded clicks: ', data)
 
     fig.suptitle('Rect() and rinput()', fontsize=16)
-    data = rinput()
+    data = rinput(blit=blit)
     print('recorded rectangle (x, y, w, h): ', data)
 
     fig.suptitle('Line()', fontsize=16)
     Line(c='k', linewidth=2, ptstyle='s', ptsize=8)
     Line(c='seagreen', linewidth=4)
-    Line(linestyle='--', linewidth=1, ptstyle='o')
+
+    # The last object imposes blitting behavior of all objects
+    Line(linestyle='--', linewidth=1, ptstyle='o', blit=blit)
 
     plt.show()
 
