@@ -71,11 +71,16 @@ class Rect(InteractiveObject):
         positions = self.set_initial_position(position)
         corner_positions = positions[:-1]  # the last one is the center
 
+        # Create center of rectangle -----------------------------------------
+        x_center, y_center = positions[-1]
+        center, = self.ax.plot(x_center, y_center, marker='+', c=self.color,
+                               markersize=ptsize)
+
         # Create all vertices (corners) of the rectangle ---------------------
         corners = []
         for pos in corner_positions:
-            pt, = self.ax.plot(*pos, marker=ptstyle, c=self.color, picker=True,
-                               pickradius=pickersize, markersize=ptsize)
+            pt, = self.ax.plot(*pos, marker=ptstyle, c=self.color,
+                               markersize=ptsize)
             corners.append(pt)
 
         # Create all lines (edges) of the rectangle --------------------------
@@ -84,17 +89,22 @@ class Rect(InteractiveObject):
             x1, y1 = corner_positions[i - 1]
             x2, y2 = pos
             line, = self.ax.plot([x1, x2], [y1, y2], c=self.color,
-                                 picker=True, pickradius=pickersize,
                                  linestyle=linestyle, linewidth=linewidth)
             lines.append(line)
 
-        # Create center of rectangle -----------------------------------------
-        x_center, y_center = positions[-1]
-        center, = self.ax.plot(x_center, y_center, marker='+', c=self.color,
-                               markersize=10, picker=True, pickradius=pickersize)
-
         self.all_artists = (*corners, *lines, center)
         self.all_pts = (*corners, center)
+
+        # make all components of the objects pickable ------------------------
+        for artist in self.all_artists:
+            artist.set_picker(True)
+
+        # Adjust pick tolerance depending on component -----------------------
+        for pt in self.all_pts:
+            pt.set_pickradius(pickersize + ptsize / 2)
+
+        for line in lines:
+            line.set_pickradius(pickersize)
 
     def set_initial_position(self, position):
         """Set position of new line, avoiding existing lines if necessary.
@@ -272,7 +282,6 @@ class Rect(InteractiveObject):
                 # No corner picked, but there might have been an edge line or more
                 picked_lines = set.intersection(self.picked_artists, lines)
                 nlines = len(picked_lines)
-                print(nlines)
 
                 if nlines == 1:
                     # Just one line: edge motion with that line

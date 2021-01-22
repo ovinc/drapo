@@ -77,22 +77,28 @@ class Line(InteractiveObject):
         (x1, y1), (x2, y2) = pos
 
         # create edge points -------------------------------------------------
-        pt1, = self.ax.plot(x1, y1, marker=ptstyle, color=color,
-                            markersize=ptsize, picker=True, pickradius=ptsize)
-        pt2, = self.ax.plot(x2, y2, marker=ptstyle, color=color,
-                            markersize=ptsize, picker=True, pickradius=ptsize)
+        pt1, = self.ax.plot(x1, y1, marker=ptstyle, color=color, markersize=ptsize)
+        pt2, = self.ax.plot(x2, y2, marker=ptstyle, color=color, markersize=ptsize)
 
         # create connecting line (link) ---------------------------------------
         x1, y1 = self.get_pt_position(pt1, 'data')
         x2, y2 = self.get_pt_position(pt2, 'data')
 
         link, = self.ax.plot([x1, x2], [y1, y2], c=color,
-                             picker=True, pickradius=pickersize,
                              linestyle=linestyle, linewidth=linewidth)
 
         # assemble lines and pts into "all" ----------------------------------
         self.all_artists = pt1, pt2, link
         self.all_pts = pt1, pt2
+
+        # make all components of the objects pickable ------------------------
+        for artist in self.all_artists:
+            artist.set_picker(True)
+
+        # Adjust pick tolerance depending on component -----------------------
+        link.set_pickradius(pickersize)
+        for pt in self.all_pts:
+            pt.set_pickradius(pickersize + ptsize / 2)
 
     def set_initial_position(self, pickersize, avoid=True):
         """Set position of new line, avoiding existing lines if necessary."""
