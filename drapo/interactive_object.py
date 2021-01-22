@@ -362,6 +362,7 @@ class InteractiveObject:
                                                     self.on_close)
         self.cidresize = self.fig.canvas.mpl_connect('resize_event',
                                                      self.on_resize)
+
     def disconnect(self):
         """disconnect callback ids"""
         # mouse events

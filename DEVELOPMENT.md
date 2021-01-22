@@ -106,7 +106,7 @@ pytest
 ```
 This will open several windows with interactive objects one can interact with. To see the various interactive tests one can do with the objects, see below.
 
-(Note: the test uses the *Qt5Agg* backend by default and switches to `TkAgg` if the first one is not available).
+(Note: the test uses the *Qt5Agg* backend by default and switches to *TkAgg* if the first one is not available).
 
 One can also run the demo (backend and blitting options available):
 ```bash
@@ -114,13 +114,6 @@ python -m drapo.demo
 python -m drapo.demo --backend TkAgg
 python -m drapo.demo --blit False
 ```
-
-After modifying code, do at least the following tests to check that the package is still working properly. Start by importing the package. In a python shell, run
-```python
-import drapo
-```
-
-A blank matplotlib window should open. When clicking or pressing keys on the figure, information on the clicks / keys should be printed in the shell.
 
 ## Recommended tests with objects
 
@@ -180,12 +173,6 @@ drapo.clickfig.main()
 ```
 which runs ClickFig with one click allowed; check that hovering the mouse over different figure/axes highlights them in light blue. Click on one of them, then run `plt.plot(1, 2, 'or')` in the console to check that it plots the result in the selected axes.
 
-### Base class
-
-To test the base class IneractiveObject, run
-```python
-drapo.interactive_object.main()
-```
 
 ### All classes
 

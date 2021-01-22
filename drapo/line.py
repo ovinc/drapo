@@ -141,42 +141,52 @@ class Line(InteractiveObject):
 
     def set_active_info(self):
         """Set active/inactive points during motion and detect motion mode."""
+        pts = self.all_artists[:2]
         line = self.all_artists[2]
 
         # set which points are active and corresponding motion mode ----------
 
-        if len(self.picked_artists) == 1:  # only line selected --> move as a whole
-            mode = 'whole'
-            active_elements = self.all_artists
+        print('picked: ', len(self.picked_artists))
 
-        elif len(self.picked_artists) == 2:  # line and pt selected --> edge mode
-            mode = 'edge'
-            active_elements = self.picked_artists
+        if len(self.picked_artists) == 1 and line in self.picked_artists:
+            # only the line is selected --> move as a whole, make both pts active
+            active_pts = set(pts)
 
-        else:  # Normally this case shouldn't happen as this method should
-            # be called only for active objects.
-            mode = None
-            active_pts = None
+        else:
+            # in all other cases, the points that need to be active are
+            # all the ones picked. If one pt is picked, move only this point
+            # and the line (edge mode). If two pts are picked (e.g. because
+            # they overlap), move the whole thing as a whole again. If nothing
+            # is picked, nothing happens (should not happen because the current
+            # method is only called for active objects)
+            active_pts = set(self.picked_artists) - {line}
 
-        active_pts = set(active_elements) - {line}
+        npts = len(active_pts)
 
-        self.active_info = {'active_pts': active_pts, 'mode': mode}
+        if npts > 1:
+            self.active_info = {'mode': 'whole', 'pts': active_pts}
+        elif npts == 1:
+            self.active_info = {'mode': 'edge', 'pts': active_pts}
+        else:
+            # Again, this should not happen
+            print('Warning: Line.set_active_info() called while no artists'
+                  'picked. Please report bug.')
 
     def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
 
         x, y = event.x, event.y  # pixel coordinates
 
-        active_pts = self.active_info['active_pts']
         mode = self.active_info['mode']
+        active_pts = self.active_info['pts']
 
-        # move just one point, the other one stays fixed
+        # EDGE mode: move just one point, the other one stays fixed ----------
         if mode == 'edge':
-            [pt] = active_pts  # should be the only pt in active_pts
+            pt, = active_pts  # should be the only pt in active_pts
             self.moving_positions[pt] = x, y
 
-        # move the line as a whole in a parallel fashion
-        elif mode == 'whole':
+        # WHOLE mode: move the line as a whole in a parallel fashion ---------
+        else:
             # get where click was initially made and calculate motion
             x0, y0 = self.press_info['click']
             dx, dy = x - x0, y - y0

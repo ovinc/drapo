@@ -6,7 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import Line, Rect, Cursor, ginput, rinput
+from . import Line, ginput, rinput
 
 
 def demo_figure():
@@ -35,10 +35,10 @@ def demo_figure():
 def demo(blit=True, backend=None):
     """Example of various objects in different figures and axes (for testing)."""
 
-    print(blit, backend)
-
     if backend is not None:
         matplotlib.use(backend)
+
+    print('Blitting', blit, 'Backend', matplotlib.get_backend())
 
     # Demo of Cursor and ginput()
 
