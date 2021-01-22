@@ -96,12 +96,87 @@ To summarize the information above, subclasses need to do the following things:
     + if not using the initiate/reset methods described above, make sure the subclass manages addition and removal to `cls.moving_objects`.
 
 
-## Testing
+# Testing
+
+## Testing interactive objects
+
+Testing is done with *pytest*. Simply `cd` into the root of the module and run
+```bash
+pytest
+```
+This will open several windows with interactive objects one can interact with. To see the various interactive tests one can do with the objects, see below.
+
+(Note: the test uses the *Qt5Agg* backend by default and switches to `TkAgg` if the first one is not available).
+
+One can also run the demo:
+```bash
+python -m drapo.demo
+```
 
 After modifying code, do at least the following tests to check that the package is still working properly. Start by importing the package. In a python shell, run
 ```python
 import drapo
 ```
+
+A blank matplotlib window should open. When clicking or pressing keys on the figure, information on the clicks / keys should be printed in the shell.
+
+## Recommended tests with objects
+
+Verify that ...
+
+### Line
+
+- Dragging works on all axes, in both dragging modes (by clicking on line ends or by clicking on the line itself).
+- Dragging two lines or more at the same time works in both modes.
+- Use matplotlib's zooming and panning tool on axes with lines. Check in particular that when finishing the zoom, moving the mouse again without zooming activated does not produce blitting bugs.
+- Make the mouse exit and re-enter the axes and figures and check for display bugs.
+
+
+### Rect
+
+Testing follows the same procedure as with the Line class. Also try dragging a rectangle and other objects (lines) separately or at the same time.
+
+Specific things to test for rectangles:
+- Dragging the rectangle "over itself" by making the lines cross should not be problematic.
+- Center point should always be in the center of the rectangle, even in nonlinear axes.
+
+
+### Cursor
+
+- Check that the cursor is automatically created when mouse enters any of the subplots.
+- While cursor is on, press shift+up/down/left/right to change thickness and color. Changes should be immediately effective and appear without any other action needed.
+- Press space to deactivate/reactivate cursor. Deactivate it outside of the figure as well and check that it does not appear when the mouse comes back in the axes.
+- Check interaction with Line and Rect instances.
+
+
+## Other development tests
+
+The tests below are not done with pytest but are other recommended tests.
+
+### ginput function
+
+(can be partially done while running the demo, see above)
+
+- Verify that left click adds a red cross at the location of the click and that left click anywhere removes the cross.
+- Same for 'a' and 'z' keystrokes.
+- Verify that recording stops after the fourth cross has been added and that a list of 4 tuples is returned in the console.
+- Re-instanciate a ginput Cursor with `drapo.cursor.main()` and check that recording can be interrupted by pressing the "enter" key, and that a list of tuples shorter than 5 is returned.
+
+### Line
+
+Additional tests:
+
+- Instantiate a cursor with `Cursor()`, and do the same as above with the cursor on. Cursor should disappear when lines are dragged.
+- Instantiate another line with `l = Line()` and check that `l.all_objects()` and `l.class_objects()` return correct information (*all_objects* should include the cursor, *class_objects* should include only lines; also check that the display name of the lines in the list is consistent in an interactive python window).
+- Test the class method `l.delete_others()` with arguments *'ax'*, *'fig'*, and no argument to see the other lines in the same axes, figure, and all other lines being progressively removed from all_objects and class_objects.
+
+### Clickfig class
+
+To test the ClickFig class, run
+```python
+drapo.clickfig.main()
+```
+which runs ClickFig with one click allowed; check that hovering the mouse over different figure/axes highlights them in light blue. Click on one of them, then run `plt.plot(1, 2, 'or')` in the console to check that it plots the result in the selected axes.
 
 ### Base class
 
@@ -110,69 +185,8 @@ To test the base class IneractiveObject, run
 drapo.interactive_object.main()
 ```
 
-A blank matplotlib window should open. When clicking or pressing keys on the figure, information on the clicks / keys should be printed in the shell.
-
-### Line class
-
-To test the Line class, run
-```python
-drapo.line.main()
-```
-This will instantiate various lines on different axes of two figures, with linear and log scales. Verify the following:
-- Dragging works on all axes, in both dragging modes (by clicking on line ends or by clicking on the line itself).
-- Dragging two lines or more at the same time works in both modes.
-- Use matplotlib's zooming and panning tool on axes with lines. Check in particular that when finishing the zoom, moving the mouse again without zooming activated does not produce blitting bugs.
-- Make the mouse exit and re-enter the axes and figures and check for display bugs.
-- Instantiate a cursor with `Cursor()`, and do the same as above with the cursor on. Cursor should disappear when lines are dragged.
-- Instantiate another line with `l = Line()` and check that `l.all_objects()` and `l.class_objects()` return correct information (*all_objects* should include the cursor, *class_objects* should include only lines; also check that the display name of the lines in the list is consistent in an interactive python window).
-- Test the class method `l.delete_others()` with arguments *'ax'*, *'fig'*, and no argument to see the other lines in the same axes, figure, and all other lines being progressively removed from all_objects and class_objects.
-
-### Rect class
-To test the Line class, run
-```python
-drapo.rectangle.main()
-```
-Testing follows the same procedure as with the Line class. Also try instantiating lines and rectangles in the same axes and drag them separately or at the same time.
-
-Specific things to test for rectangles:
-- Dragging the rectangle "over itself" by making the lines cross should not be problematic.
-- Center point should always be in the center of the rectangle, even in nonlinear axes.
-
-### Cursor class and ginput
-To test the Cursor class, run
-```python
-drapo.cursor.main()
-```
-This will open a figure with two subplots, and with a cursor instantiated by the ginput function, aiming at recording 5 data points from the figure.
-
-Testing follows the same procedure as with the Line/Rect classes, with some other specificities to test:
-
-#### Cursor behavior
-- Check that the cursor is automatically created when mouse enters any of the subplots.
-- While cursor is on, press shift+up/down/left/right to change thickness and color. Changes should be immediately effective and appear without any other action needed.
-- Press space to deactivate/reactivate cursor. Deactivate it outside of the figure as well and check that it does not appear when the mouse comes back in the axes.
-- Check interaction with Line and Rect instances as is done in the Line procedure.
-
-#### ginput behavior
-- Verify that left click adds a red cross at the location of the click and that left click anywhere removes the cross.
-- Same for 'a' and 'z' keystrokes.
-- Verify that recording stops after the fifth cross has been added and that a list of 5 tuples is returned in the console.
-- Re-instanciate a ginput Cursor with `drapo.cursor.main()` and check that recording can be interrupted by pressing the "enter" key, and that a list of tuples shorter than 5 is returned.
-
-### Clickfig class
-To test the ClickFig class, run
-```python
-drapo.clickfig.main()
-```
-which runs ClickFig with one click allowed; check that hovering the mouse over different figure/axes highlights them in light blue. Click on one of them, then run `plt.plot(1, 2, 'or')` in the console to check that it plots the result in the selected axes.
-
 ### All classes
 
 For all classes, it is useful to also check the following things :
 - Re-run tests by passing the argument `blit=False` in main() to see if things still work without blitting.
 - Re-run basic tests with other Matplotlib backends: pass the argument `backend='yyy'` where *yyy* is the name of the backend (try e.g. *Qt5Agg*, *Qt4Agg*, *TkAgg*)
-
-
-## Contributors
-
-- Olivier Vincent (olivier.a-vincent@wanadoo.fr)

@@ -1,35 +1,11 @@
 """Interactive, draggable rectangle on matplotlib figure."""
 
-# TODO -- Add blocking behavior to be able to define cropzones etc.
+
 # TODO -- Add option for appearance of center
 # TODO -- add possibility to interactively change color
 
 
-import matplotlib.pyplot as plt
-import matplotlib
-import numpy as np
-
 from .interactive_object import InteractiveObject
-
-
-def main(blit=True, backend=None):  # For testing purposes
-
-    if backend is not None:
-        matplotlib.use(backend)
-
-    fig1, ax1 = plt.subplots()
-    tt = np.linspace(0, 4, 100000)
-    xx = np.exp(-tt)
-    ax1.plot(tt, xx, '-b')
-
-    ax1.set_xscale('log')
-    ax1.set_yscale('log')
-
-    r1 = Rect()
-
-    plt.show(block=False)
-
-    return r1
 
 
 class Rect(InteractiveObject):
@@ -48,7 +24,8 @@ class Rect(InteractiveObject):
     - `position` (4-tuple (xmin, ymin, width, height) in data coordinates;
                   default None, i.e. rectangle automatically centered in axes).
     - 'pickersize' (float, default: 5), tolerance for object picking.
-    - `color` (matplotlib's color, default: 'r' (red)).
+    - `color` (matplotlib's color, default: None (class default value)).
+    - `c` (shortcut for `color`)
 
     Appearance of the vertices (corners):
     - `ptstyle` (matplotlib's marker, default: dot '.').
@@ -67,17 +44,17 @@ class Rect(InteractiveObject):
 
     name = "Draggable Rectangle"
 
-
-    def __init__(self, fig=None, ax=None, position=None, pickersize=5,
-                 color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
+    def __init__(self, fig=None, ax=None, position=None, pickersize=5, c=None,
+                 color=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
                  blit=True, block=False, timeout=0):
 
-        super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
+        super().__init__(fig=fig, ax=ax, color=color, c=c,
+                         blit=blit, block=block)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
         self.create(pickersize, position,
-                    color, ptstyle, ptsize, linestyle, linewidth)
+                    ptstyle, ptsize, linestyle, linewidth)
 
         # to prevent any shift in axes limits when instanciating line. The
         self.ax.set_xlim(xlim)
@@ -88,9 +65,8 @@ class Rect(InteractiveObject):
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)
 
-
     def create(self, pickersize, position,
-               color, ptstyle, ptsize, linestyle, linewidth):
+               ptstyle, ptsize, linestyle, linewidth):
 
         positions = self.set_initial_position(position)
         corner_positions = positions[:-1]  # the last one is the center
@@ -98,7 +74,7 @@ class Rect(InteractiveObject):
         # Create all vertices (corners) of the rectangle ---------------------
         corners = []
         for pos in corner_positions:
-            pt, = self.ax.plot(*pos, marker=ptstyle, color=color, picker=True,
+            pt, = self.ax.plot(*pos, marker=ptstyle, c=self.color, picker=True,
                                pickradius=pickersize, markersize=ptsize)
             corners.append(pt)
 
@@ -107,19 +83,18 @@ class Rect(InteractiveObject):
         for i, pos in enumerate(corner_positions):
             x1, y1 = corner_positions[i - 1]
             x2, y2 = pos
-            line, = self.ax.plot([x1, x2], [y1, y2], c=color,
+            line, = self.ax.plot([x1, x2], [y1, y2], c=self.color,
                                  picker=True, pickradius=pickersize,
                                  linestyle=linestyle, linewidth=linewidth)
             lines.append(line)
 
         # Create center of rectangle -----------------------------------------
         x_center, y_center = positions[-1]
-        center, = self.ax.plot(x_center, y_center, marker='+', color=color,
+        center, = self.ax.plot(x_center, y_center, marker='+', c=self.color,
                                markersize=10, picker=True, pickradius=pickersize)
 
         self.all_artists = (*corners, *lines, center)
         self.all_pts = (*corners, center)
-
 
     def set_initial_position(self, position):
         """Set position of new line, avoiding existing lines if necessary."""
@@ -153,7 +128,6 @@ class Rect(InteractiveObject):
 
         return pos1, pos2, pos3, pos4, posc
 
-
     def get_position(self):
         """Get position (xmin, ymin, width, height) in data coordinates."""
         xs, ys = [], []
@@ -170,7 +144,6 @@ class Rect(InteractiveObject):
                              'because figure itself has been closed.')
         w, h = xmax - xmin, ymax - ymin
         return xmin, ymin, w, h
-
 
     def set_active_info(self):
         """Set active/inactive points during motion and detect motion mode."""
@@ -204,7 +177,6 @@ class Rect(InteractiveObject):
                 # points connected to that line
                 active_pts = [corners[iprev], corners[i], center]
 
-
         elif len(self.picked_artists) == 3:  # corner selected --> move corresponding two edges
 
             # find which corner has been selected and set its index as the mode
@@ -225,7 +197,6 @@ class Rect(InteractiveObject):
         self.active_info = {'active_pts': active_pts,
                             'active_lines': active_lines,
                             'mode': mode}
-
 
     def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
@@ -281,7 +252,6 @@ class Rect(InteractiveObject):
             x2, y2 = self.moving_positions[opposite_corner]
             self.moving_positions[center] = (x1 + x2) / 2, (y1 + y2) / 2
 
-
         # now apply the changes to the graph ---------------------------------
         for pt in active_pts:
             xnew, ynew = self.pxtodata(self.moving_positions[pt])
@@ -293,9 +263,7 @@ class Rect(InteractiveObject):
             x2, y2 = self.pxtodata(self.moving_positions[corners[i]])
             line.set_data([x1, x2], [y1, y2])
 
-
 # ============================ callback functions ============================
-
 
     def on_key_press(self, event):
         if event.key == 'enter':
@@ -305,6 +273,7 @@ class Rect(InteractiveObject):
 
 
 # ======================== function rinput ===================================
+
 
 def rinput():
     """Select area of figure with interactive rectangle (enter to validate).
@@ -324,10 +293,3 @@ def rinput():
         print('Warning - Rectangle deleted before data validation. Returning None.')
         position = None
     return position
-
-
-# ================================ direct run ================================
-
-
-if __name__ == '__main__':
-    main()

@@ -1,56 +1,13 @@
 """Extensions to Matplotlib: Line class (draggable line)"""
 
-# TODO -- add blocking behavior to be able to measure slopes etc.
 # TODO -- add double click to "freeze" line to avoid moving it by mistake later?
 # TODO -- add keystroke controls (e.g. to delete the line)?
 # TODO -- key press to make the line exactly vertical or horiztontal
 # TODO -- live indication of the slope of the line.
-# TODO -- add a blocking option ?
 
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
 import math as m
 
 from .interactive_object import InteractiveObject
-
-# ================================= Testing ==================================
-
-def main(blit=True, backend=None):  # For testing purposes
-    """ example of instances of Lines in different figures and axes"""
-
-    if backend is not None:
-        matplotlib.use(backend)
-
-    fig1, ax1 = plt.subplots()
-    tt = np.linspace(0, 4, 10000)
-    xx = np.exp(-tt)
-    ax1.plot(tt, xx, '-b')
-
-    ax1.set_xscale('log')
-    ax1.set_yscale('log')
-
-    l1 = Line()
-
-    z = np.random.randn(1000)
-
-    fig2, (ax2a, ax2b) = plt.subplots(1, 2)
-    ax2a.plot(tt, xx)
-    ax2b.plot(z, '-ob')
-
-    ax2a.set_yscale('log')
-
-    l2 = Line(ax=ax2a)
-    l3 = Line(ax=ax2b)
-
-    l4 = Line(blit=blit)  # this one is plot in current axes, and sets the blit behavior of all lines
-
-    plt.show(block=False)
-
-    return l1, l2, l3, l4
-
-
-# ================================ Line class ================================
 
 
 class Line(InteractiveObject):
@@ -67,6 +24,7 @@ class Line(InteractiveObject):
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - 'pickersize' (float, default: 5), tolerance for line picking.
     - `color` (matplotlib's color, default: None (class default value)).
+    - `c` (shortcut for `color`)
 
     Appearance of the edge points:
     - `ptstyle` (matplotlib's marker, default: dot '.').
@@ -76,7 +34,7 @@ class Line(InteractiveObject):
     - `linestyle` (matplotlib's linestyle, default: continuous '-').
     - `linewidth` (float, default: 1). Line width.
 
-    Instanciation option:
+    Instantiation option:
     - `avoid_existing` (bool, default:True). Avoid overlapping existing lines
     (only avoids that edge points overlap, but lines can still cross).
 
@@ -88,13 +46,12 @@ class Line(InteractiveObject):
 
     name = 'Draggable Line'
 
-
-    def __init__(self, fig=None, ax=None, pickersize=5, color=None,
+    def __init__(self, fig=None, ax=None, pickersize=5, color=None, c=None,
                  ptstyle='.', ptsize=5, linestyle='-', linewidth=1,
                  avoid_existing=True, blit=True, block=False):
 
-        super().__init__(fig=fig, ax=ax, color=color, blit=blit, block=block)
-
+        super().__init__(fig=fig, ax=ax, color=color, c=c,
+                         blit=blit, block=block)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
@@ -107,10 +64,10 @@ class Line(InteractiveObject):
 
         self.fig.canvas.draw()  # Useful?
 
-# ============================ main line methods =============================
+    # ========================== main line methods ===========================
 
-# these methods are specific to the Line class and are called by the more
-# generic callback functions (see below)
+    # these methods are specific to the Line class and are called by the
+    # more generic callback functions defined in InteractiveObject or below
 
     def create(self, pickersize, color, ptstyle, ptsize, linestyle,
                linewidth, avoid_existing):
@@ -138,7 +95,6 @@ class Line(InteractiveObject):
         self.all_artists = pt1, pt2, link
         self.all_pts = pt1, pt2
 
-
     def set_initial_position(self, pickersize, avoid=True):
         """Set position of new line, avoiding existing lines if necessary."""
 
@@ -150,11 +106,12 @@ class Line(InteractiveObject):
         xmin, ymin = self.datatopx((xmin, ymin))
         xmax, ymax = self.datatopx((xmax, ymax))
 
-        x1, y1 = (1-a1)*xmin + a1*xmax, (1-b1)*ymin + b1*ymax  # default pos.
-        x2, y2 = (1-a2)*xmin + a2*xmax, (1-b2)*ymin + b2*ymax
+        # default positions
+        x1, y1 = (1 - a1) * xmin + a1 * xmax, (1 - b1) * ymin + b1 * ymax
+        x2, y2 = (1 - a2) * xmin + a2 * xmax, (1 - b2) * ymin + b2 * ymax
 
         if avoid:
-            mindist = 3*pickersize  # min distance between pts to avoid overlapping
+            mindist = 3 * pickersize  # min distance between pts to avoid overlapping
             dragonax = []  # list of coords (px) of existing lines in the current axes
 
             otherlines = set(self.class_objects()) - set([self])
@@ -183,7 +140,6 @@ class Line(InteractiveObject):
 
         return self.pxtodata((x1, y1)), self.pxtodata((x2, y2))
 
-
     def set_active_info(self):
         """Set active/inactive points during motion and detect motion mode."""
         line = self.all_artists[2]
@@ -206,7 +162,6 @@ class Line(InteractiveObject):
         active_pts = set(active_elements) - {line}
 
         self.active_info = {'active_pts': active_pts, 'mode': mode}
-
 
     def update_position(self, event):
         """Update object position depending on moving mode and mouse position."""
@@ -241,16 +196,7 @@ class Line(InteractiveObject):
         x2, y2 = self.pxtodata(self.moving_positions[pt2])
         link.set_data([x1, x2], [y1, y2])
 
-
-# ============================ callback functions ============================
-
+# ============================= callback methods =============================
 
     def on_key_press(self, event):
         pass
-
-
-# ================================ direct run ================================
-
-
-if __name__ == '__main__':
-    main()

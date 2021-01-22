@@ -1,6 +1,6 @@
 """InteractiveObject class. Not for direct use, just subclassing.
 
-Classes Line, Rect and Cursor subclass InteractiveObject defined here.
+Line, Rect and Cursor each subclass the InteractiveObject class defined here.
 """
 
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ def main():
 class InteractiveObject:
     """Base class for moving objects on a figure. Used for subclassing only.
 
-    See CONTRIBUTING.md for information on how to use this class.
+    See DEVELOPMENT.md for information on how to use this class.
     """
 
     name = 'Interactive Object'
@@ -41,12 +41,9 @@ class InteractiveObject:
     # Define default colors of the class (potentially cycled through by some
     # methods. If user specifies a color not in the list, it is added to the
     # class colors.
-    white = '#eeeeee'  # not completely white so that it is still visible
-    black = '#111111'  # same in case of black background
-    colors = [black, 'r', 'b', 'g', white]
+    colors = ['crimson', 'dimgray', 'whitesmoke', 'dodgerblue', 'lightgreen']
 
-
-    def __init__(self, fig=None, ax=None, color=None,
+    def __init__(self, fig=None, ax=None, color=None, c=None,
                  blit=True, block=False):
 
         self.fig = plt.gcf() if fig is None else fig
@@ -77,6 +74,11 @@ class InteractiveObject:
         # defines whether the interactive object is blocking the console or not
         self.block = block
 
+        # color management ---------------------------------------------------
+
+        if c is not None:
+            color = c
+
         if color is None:
             self.color = self.__class__.colors[0]
         elif not is_color_like(color):
@@ -86,6 +88,8 @@ class InteractiveObject:
             self.color = color
             if color not in self.__class__.colors:
                 self.__class__.colors.append(color)
+
+        # --------------------------------------------------------------------
 
         # Transforms functions to go from px to data coords.
         # Need to be redefined if figure is resized
@@ -147,7 +151,6 @@ class InteractiveObject:
         else:
             canvas.draw()
 
-
     def initiate_motion(self, event):
         """Initiate motion and define leading artist that synchronizes plot.
 
@@ -184,7 +187,6 @@ class InteractiveObject:
         self.datatopx = self.ax.transData.transform  # transform between data coords to px coords.
         self.pxtodata = self.ax.transData.inverted().transform  # pixels to data coordinates
 
-
     def reset_after_motion(self):
         """Reset attributes that should be active only during motion."""
 
@@ -203,7 +205,6 @@ class InteractiveObject:
         if self is self.__class__.leader:
             self.__class__.leader = None
 
-
     def set_press_info(self, event):
         """Records information related to the mouse click, in px coordinates."""
 
@@ -217,7 +218,6 @@ class InteractiveObject:
 
         self.press_info = press_info
         self.moving_positions = moving_positions
-
 
     def eraser(self, option):
         """Private erasing function that is used by erase() and delete()"""
@@ -243,16 +243,13 @@ class InteractiveObject:
         else:
             print('Warning: eraser function not called properly.')
 
-
     def erase(self):
         """Lighter than delete(), keeps object connected and referenced"""
         self.eraser('erase')
 
-
     def delete(self):
         """Hard delete of object by removing its components and references"""
         self.eraser('delete')
-
 
     def delete_others(self, *args):
         """Delete other instances of the same class (eccluding parents/children)
@@ -280,7 +277,6 @@ class InteractiveObject:
         for other in others:
             other.delete()
 
-
     def get_pt_position(self, pt, option='data'):
         """Gets point position as a tuple from matplotlib line object.
 
@@ -297,7 +293,6 @@ class InteractiveObject:
             return pos_px
         else:
             raise ValueError(f'{option} not a valid argument.')
-
 
     @classmethod
     def class_objects(cls):
@@ -318,9 +313,7 @@ class InteractiveObject:
         for obj in objects:
             obj.delete()
 
-
 # TO DEFINE IN SUBCLASSES ====================================================
-
 
     def create(self):
         """Create object based on options. Need to be defined in subclass."""
@@ -338,9 +331,7 @@ class InteractiveObject:
         """
         pass
 
-
 # ================= connect/disconnect events and callbacks ==================
-
 
     def connect(self):
         """connect object to figure canvas events"""
@@ -371,7 +362,6 @@ class InteractiveObject:
                                                     self.on_close)
         self.cidresize = self.fig.canvas.mpl_connect('resize_event',
                                                      self.on_resize)
-
     def disconnect(self):
         """disconnect callback ids"""
         # mouse events
@@ -390,12 +380,9 @@ class InteractiveObject:
         self.fig.canvas.mpl_disconnect(self.cidclose)
         self.fig.canvas.mpl_disconnect(self.cidresize)
 
-
-# ============================ callback functions ============================
-
+# ============================= callback methods =============================
 
     # mouse events  ----------------------------------------------------------
-
 
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
@@ -428,9 +415,7 @@ class InteractiveObject:
         else:
             self.reset_after_motion()
 
-
     # key events  ------------------------------------------------------------
-
 
     def on_key_press(self, event):
         print(f'Key Press: {event.key}')
@@ -468,6 +453,3 @@ class InteractiveObject:
 
 if __name__ == '__main__':
     main()
-
-
-

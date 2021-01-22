@@ -6,7 +6,7 @@
 
 - The last interactive object instance dictates the blitting behavior (True or False) for every other existing object.
 
-- All interactive objects are subclasses of a base class called *InteractiveObject*. See *CONTRIBUTING.md* for details on code structure, implementation and subclassing.
+- All interactive objects are subclasses of a base class called *InteractiveObject*. See *DEVELOPMENT.md* for details on code structure, implementation and subclassing.
 
 - By default, all instances are non-blocking. Use `block=True` to make them block the console (not implemented in Line/Rect at the moment). The ginput() function uses the Cursor class in blocking mode.
 
@@ -15,7 +15,7 @@
 Interactive draggable line in matplotlib figure/axes.
 
 ```python
-Line(fig=None, ax=None, pickersize=5, color='k', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True, blit=True, block=False)
+Line(fig=None, ax=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True, blit=True, block=False)
 ```
 
 The line is composed of three elements : two points at the edge (pt1, pt2)
@@ -36,7 +36,8 @@ without any other specification.
 - `fig` (matplotlib figure, default: current figure, specified as None).
 - `ax` (matplotlib axes, default: current axes, specified as None).
 - `pickersize` (float, default: 5), tolerance for line picking.
-- `color` (matplotlib's color, default: red, i.e. 'r').
+- `color` (matplotlib's color, default: None (class default value)).
+- `c` (shortcut for `color`)
 
 Appearance of the edge points (pt1, pt2):
 - `ptstyle` (matplotlib's marker, default: dot '.').
@@ -79,7 +80,7 @@ and instantiate another line.
 Interactive draggable rectangle in matplotlib figure/axes.
 
 ```python
-Rect(self, fig=None, ax=None, position=None, pickersize=5, color='r', ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False, timeout=0):
+Rect(self, fig=None, ax=None, position=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False, timeout=0):
 ```
 
 Left click to drag rectangle, right click or enter to remove it. Clicking can be done on the edges, vertices (corners), or on the center. These clicks trigger different modes of motion.
@@ -92,7 +93,8 @@ All parameters optional so that a rectangle can be created by `Rect()`.
 - `ax` (matplotlib axes, default: current axes, specified as None).
 - `position` (4-tuple (xmin, ymin, width, height) in data coordinates; default None, i.e. rectangle automatically centered in axes).
 - `pickersize` (float, default: 5), tolerance for object picking.
-- `color` (matplotlib's color, default: 'r' (red)).
+- `color` (matplotlib's color, default: None (class default value)).
+- `c` (shortcut for `color`)
 
 Appearance of the vertices (corners):
 - `ptstyle` (matplotlib's marker, default: dot '.').
@@ -121,7 +123,7 @@ Other
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(fig=None, color='r', linestyle=':', linewidth=1, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000,block=False, timeout=0,  mark_symbol='+', mark_size=10)
+Cursor(fig=None, color=None, c=None, linestyle=':', linewidth=1, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000,block=False, timeout=0,  mark_symbol='+', mark_size=10)
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -156,7 +158,8 @@ All parameters optional so that a cursor can just be created by `Cursor()`
 without any other specification.
 
 - `fig` (matplotlib figure, default: current figure, specified as None).
-- `color` (matplotlib's color, default: None, i.e. class default value).
+- `color` (matplotlib's color, default: None (class default value)).
+- `c` (shortcut for `color`)
 - `linestyle` (matplotlib's linestyle, default: dotted ':').
 - `linewidth` (float, default: 1.0). Line width.
 - `blit` (bool, default: True). Blitting for performance.
@@ -336,21 +339,3 @@ and allow 4 left-clicks to activate these fig/axes in matplotlib.
 ClickFig(-1)
 ```
 does the same, but is active forever. Deactivate it with right-click.
-
-**Note**: to see direct use cases and instantiation of cursor and lines,
-it is also possible to run the following in a python shell (normally used for testing, see *CONTRIBUTING.md*) after running `import drapo`:
-```python
-drapo.line.main()
-```
-and/or
-```python
-drapo.rectangle.main()
-```
-and/or
-```python
-drapo.cursor.main()
-```
-and/or
-```python
-drapo.clickfig.main()
-```

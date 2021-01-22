@@ -1,10 +1,10 @@
 # About
 
-**drapo** (*draggable plot objects*) is a Python 3 package that provides a set of interactive graphical objects on Matplotlib figures: draggable line, draggable rectangle, moving cursor, and interactive click to define active figure/axes.
+**drapo** (_**dra**ggable **p**lot **o**bjects_) is a Python 3 package that provides a set of interactive graphical objects on Matplotlib figures: draggable line, draggable rectangle, moving cursor, and interactive click to define active figure/axes.
 
 Based on these tools, the package also provides graphical input functions for measuring/extracting data interactively from a figure, such as ginput (get location of clicks) and rinput (get region of interest from interactive rectangle).
 
-Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`).
+Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`). The *MacOSX* backend can cause problems (see below).
 
 ### Draggable shapes
 - **Line** is a class that creates a draggable line.
@@ -20,9 +20,9 @@ Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, us
 ### Other
 - **ClickFig** is a class that activates figures and axes (makes them the current ones) by mouse hovering and clicking.
 
-Below is an illustration of instances of Line (left, black), Rect (left, red), Cursor (right, green). The current mouse position is at the center of the cursor.
 
-![](https://raw.githubusercontent.com/ovinc/drapo/master/example.jpg)
+![](https://raw.githubusercontent.com/ovinc/drapo/master/media/demo.gif)
+
 
 
 # Install
@@ -35,6 +35,13 @@ pip install drapo
 # Quick start
 
 Below is a brief overview on how to use the package contents with the most basic features. For full documentation, see *DOCUMENTATION.md*. For background code and development info, see *DEVELOPMENT.md*.
+
+For a brief demo of various objects:
+```bash
+python -m drapo.demo
+```
+
+To use individual objects and functions:
 
 ```python
 from drapo import Line, Cursor, Rect, ClickFig, ginput, rinput
@@ -93,7 +100,7 @@ If the package does not work, try the following hacks:
 
 - matplotlib
 - importlib-metadata
-- numpy (optional, only needed to run the examples present in the main() functions)
+- numpy (optional, only needed to run demos and examples)
 
 ## Python
 

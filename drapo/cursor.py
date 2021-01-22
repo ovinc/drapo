@@ -12,39 +12,9 @@ and allowing zooming/panning.
 # TODO -- add option to pick exact already drawn datapoints close to the click
 
 
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
 import time
 
 from .interactive_object import InteractiveObject
-
-# ================================= Testing ==================================
-
-
-def main(blit=True, backend=None):  # for testing purposes
-
-    if backend is not None:
-        matplotlib.use(backend)
-
-    """ Example of use."""
-    x = [0, 1, 2, 3, 4]
-    y = [4, 7, 11, 18, 33]
-
-    z = np.random.randn(1000)
-
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.plot(x, y, '-ob')
-    ax2.plot(z, '-ok')
-
-    # without the block=False option, the program does not go to ginput
-    plt.show(block=False)
-
-    data = ginput(5, blit=blit)
-    print(data)
-
-
-# =============================== Cursor class ===============================
 
 
 class Cursor(InteractiveObject):
@@ -65,7 +35,8 @@ class Cursor(InteractiveObject):
     All parameters optional so that a cursor can be created by `Cursor()`.
 
     - `fig` (matplotlib figure, default: current figure, specified as None).
-    - `color` (matplotlib's color, default: red, i.e. 'r').
+    - `color` (matplotlib's color, default: None (class default value)).
+    - `c` (shortcut for `color`)
     - `linestyle` (matplotlib's linestyle, default: dotted ':').
     - `linewidth` (float, default: 1.0). Line width.
     - `blit` (bool, default: True). Blitting for performance.
@@ -104,15 +75,14 @@ class Cursor(InteractiveObject):
 
     name = 'Cursor'
 
-
-    def __init__(self, fig=None, color='r', linestyle=':', linewidth=1,
+    def __init__(self, fig=None, color=None, c=None, linestyle=':', linewidth=1,
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
                  mark_symbol='+', mark_size=10):
         """Note: cursor drawn only when the mouse enters axes."""
 
-        super().__init__(fig, color=color, blit=blit, block=block)
+        super().__init__(fig, color=color, c=c, blit=blit, block=block)
 
         # Cursor state attributes
         self.press = False  # active when mouse is currently pressed
@@ -170,10 +140,7 @@ class Cursor(InteractiveObject):
 
         return base_message + ' ' + add_message
 
-
-
 # =========================== main cursor methods ============================
-
 
     def create(self, event):
         """Draw a cursor (h+v lines) that stop at the edge of the axes."""
@@ -206,7 +173,6 @@ class Cursor(InteractiveObject):
         else:
             self.fig.canvas.draw()
 
-
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
 
@@ -224,11 +190,9 @@ class Cursor(InteractiveObject):
         vline.set_xdata([x, x])
         vline.set_ydata([ymin, ymax])
 
-
     def set_press_info(self, event):
         self.press_info = {'currently_pressed': True,
                            'click_position': (event.xdata, event.ydata)}
-
 
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
@@ -236,11 +200,9 @@ class Cursor(InteractiveObject):
             mark.remove()
         self.fig.canvas.draw()
 
-
     def erase_data(self):
         """Erase data of recorded clicks"""
         self.clickdata = []
-
 
     def add_point(self, pos):
         """Add point to the click data (triggered by click or key press)"""
@@ -254,7 +216,6 @@ class Cursor(InteractiveObject):
                                  markersize=self.marksize)
             self.marks.append(mark)
         self.fig.canvas.draw()
-
 
     def remove_point(self):
         """Add point to the click data (triggered by click or key press)"""
@@ -273,9 +234,7 @@ class Cursor(InteractiveObject):
                 mark.remove()
         self.fig.canvas.draw()
 
-
-# ============================ callback functions ============================
-
+# ============================= callback methods =============================
 
     def on_enter_axes(self, event):
         """Create a cursor when mouse enters axes."""
@@ -286,13 +245,11 @@ class Cursor(InteractiveObject):
         if self.__class__.blit:
             self.__class__.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
-
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
         self.inaxes = False
         if self.visible and not self.press_info['currently_pressed']:
             self.erase()
-
 
     def on_motion(self, event):
         """Update position of the cursor when mouse is in motion."""
@@ -300,13 +257,11 @@ class Cursor(InteractiveObject):
         if self.visible and self.inaxes and not self.press_info['currently_pressed']:
             self.update_graph(event)
 
-
     def on_mouse_press(self, event):
         """If mouse is pressed, deactivate cursor temporarily."""
         self.set_press_info(event)
         if self.visible and self.inaxes:
             self.erase()
-
 
     def on_mouse_release(self, event):
         """When releasing click, reactivate cursor and redraw figure.
@@ -339,7 +294,6 @@ class Cursor(InteractiveObject):
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
-
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -406,7 +360,6 @@ class Cursor(InteractiveObject):
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
-
     def on_pick(self, event):
         """Contrary to draggble objects, no self-picking here."""
         pass
@@ -446,9 +399,3 @@ def ginput(n=1, timeout=0, show_clicks=True,
     time.sleep(0.2)  # just to have time to see the last click and its mark
     c.erase_marks()
     return data
-
-
-# ================================ direct run ================================
-
-if __name__ == '__main__':
-    main()

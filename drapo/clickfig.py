@@ -34,7 +34,7 @@ def main(backend=None):
     ClickFig()
 
 
-# ================================ Line class ================================
+# ============================== ClickFig class ==============================
 
 
 class ClickFig:
@@ -100,9 +100,7 @@ class ClickFig:
     def erase(self):
         self.disconnect()
 
-
-# ============================ callback functions ============================
-
+# ============================= callback methods =============================
 
     def on_fig_enter(self, event):
         if self.highlight is True:
@@ -174,9 +172,7 @@ class ClickFig:
         pass
         # self.erase()
 
-
 # ================= connect/disconnect events and callbacks ==================
-
 
     def connect(self):
         """Connect mouse events to all existing figures"""
@@ -200,6 +196,7 @@ class ClickFig:
 
 
 # =========================== custom Figure Error ============================
+
 
 class FigureError(Exception):
     """Raised when there are no existing figures."""
