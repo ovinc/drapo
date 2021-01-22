@@ -146,8 +146,6 @@ class Line(InteractiveObject):
 
         # set which points are active and corresponding motion mode ----------
 
-        print('picked: ', len(self.picked_artists))
-
         if len(self.picked_artists) == 1 and line in self.picked_artists:
             # only the line is selected --> move as a whole, make both pts active
             active_pts = set(pts)
@@ -169,7 +167,7 @@ class Line(InteractiveObject):
             self.active_info = {'mode': 'edge', 'pts': active_pts}
         else:
             # Again, this should not happen
-            print('Warning: Line.set_active_info() called while no artists'
+            print('Warning: Line.set_active_info() called while no artists '
                   'picked. Please report bug.')
 
     def update_position(self, event):
