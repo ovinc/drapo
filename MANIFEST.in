@@ -1,2 +1,4 @@
-include *.jpg
 include *.md
+recursive-include media *.gif
+recursive-include media *.jpg
+recursive-include tests *.py
