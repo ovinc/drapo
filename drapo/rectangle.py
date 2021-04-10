@@ -38,7 +38,6 @@ class Rect(InteractiveObject):
     Other
     - `blit` (bool, default True). If True, blitting is used for fast rendering
     - `block`(bool, default False). If True, object blocks the console
-    (block not implemented yet for Line and Rect).
     - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
     """
 
@@ -354,7 +353,7 @@ class Rect(InteractiveObject):
             x2, y2 = self.pxtodata(self.moving_positions[self.corners[i]])
             line.set_data([x1, x2], [y1, y2])
 
-# ============================ callback functions ============================
+# ============================= callback methods =============================
 
     def on_key_press(self, event):
         if event.key == 'enter':

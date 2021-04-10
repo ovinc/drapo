@@ -1,7 +1,7 @@
 """Extensions to Matplotlib: Line class (draggable line)"""
 
 # TODO -- add double click to "freeze" line to avoid moving it by mistake later?
-# TODO -- add keystroke controls (e.g. to delete the line)?
+# TODO -- add more keystroke controls ?
 # TODO -- key press to make the line exactly vertical or horiztontal
 # TODO -- live indication of the slope of the line.
 
@@ -40,14 +40,14 @@ class Line(InteractiveObject):
     Other
     - `blit` (bool, default True). If True, blitting is used for fast rendering
     - `block`(bool, default False). If True, object blocks the console
-    (block not implemented yet for Line and Rect)
+    - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
     """
 
     name = 'Draggable Line'
 
     def __init__(self, fig=None, ax=None, pickersize=5, color=None, c=None,
                  ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
-                 avoid_existing=True, blit=True, block=False):
+                 avoid_existing=True, blit=True, block=False, timeout=0):
 
         super().__init__(fig=fig, ax=ax, color=color, c=c,
                          blit=blit, block=block)
@@ -62,6 +62,9 @@ class Line(InteractiveObject):
         self.ax.set_ylim(ylim)
 
         self.fig.canvas.draw()  # Useful?
+
+        if self.block:
+            self.fig.canvas.start_event_loop(timeout=timeout)
 
     # ========================== main line methods ===========================
 
@@ -206,7 +209,46 @@ class Line(InteractiveObject):
         x2, y2 = self.pxtodata(self.moving_positions[pt2])
         link.set_data([x1, x2], [y1, y2])
 
+    def get_position(self):
+        """Get position ((x1, y1), (x2, y2)) in data coordinates."""
+        positions = []
+
+        for pt in self.all_pts:
+            position = self.get_pt_position(pt, 'data')
+            positions.append(position)
+
+        return tuple(positions)
+
 # ============================= callback methods =============================
 
     def on_key_press(self, event):
-        pass
+        if event.key == 'enter':
+            print('Line position recorded. Line deleted.')
+            self.recorded_position = self.get_position()
+            self.delete()
+
+
+# ======================== function rinput ===================================
+
+
+def linput(**kwargs):
+    """Select position information with interactive Line (enter to validate).
+
+    Parameters
+    ----------
+    Same as drapo.Line(), but block remains always True by default
+
+    Returns
+    -------
+    Tuple of tuples ((x1, y1), (x2, y2)) of data coordinates (unordered)
+    """
+    if 'block' in kwargs:
+        kwargs.pop('block')
+
+    line = Line(block=True, **kwargs)
+    try:
+        position = line.recorded_position
+    except AttributeError:
+        print('Warning - Line deleted before data validation. Returning None.')
+        position = None
+    return position

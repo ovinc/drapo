@@ -18,6 +18,7 @@ from .cursor import Cursor
 from .cursor import ginput
 
 from .line import Line
+from .line import linput
 
 from .rectangle import Rect
 from .rectangle import rinput

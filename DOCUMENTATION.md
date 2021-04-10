@@ -73,6 +73,8 @@ drag it away.
 possible to separate them again. Best is to consider them as a single line
 and instantiate another line.
 
+- Right-click will simply remove the line, while pressing <kbd>enter</kbd> will save its position in the attribute `self.recorded_position` before erasing the line. This is useful for the *linput()* function.
+
 
 ## Rect class
 -------------
@@ -242,6 +244,15 @@ with only an additional one: blit (bool, default True): see Cursor.
 List of tuples corresponding to the list of clicked (x, y) coordinates.
 
 
+## linput function
+------------------
+
+Select position of line edges on figure with interactive line (enter to validate).
+
+```python
+position = linput():   # (x1, y1), (x2, y2)
+```
+
 
 ## rinput function
 ------------------
@@ -249,7 +260,7 @@ List of tuples corresponding to the list of clicked (x, y) coordinates.
 Select area of figure with interactive rectangle (enter to validate).
 
 ```python
-position = rinput():
+position = rinput():  # (x, y, w, h)
 ```
 
 ### Parameters
@@ -324,6 +335,12 @@ up arrow and changed color by using the left/right arrows.
 data = ginput(4, show_clicks=False)
 ```
 will return a tuple of 4 points clicked on the figure (or managed with keystrokes), but without showing the location of the clicks on the figure with a marker.
+
+```python
+position = linput()
+```
+will instantiate an interactive line on the figure. Press enter to deactivate the line and return its position as a tuple ((x1, y1), (x2, y2)) in data coordinates.
+
 
 ```python
 position = rinput()

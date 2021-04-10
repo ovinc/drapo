@@ -1,8 +1,8 @@
 # About
 
-**drapo** (_**dra**ggable **p**lot **o**bjects_) is a Python 3 package that provides a set of interactive graphical objects on Matplotlib figures: draggable line, draggable rectangle, moving cursor, and interactive click to define active figure/axes.
+**drapo** (_**dra**ggable **p**lot **o**bjects_) is a Python 3 package that provides a set of interactive graphical objects on Matplotlib figures: draggable line (`Line`), draggable rectangle (`Rect`), moving cursor (`Cursor`), and interactive click to define active figure/axes (`ClickFig`).
 
-Based on these tools, the package also provides graphical input functions for measuring/extracting data interactively from a figure, such as ginput (get location of clicks) and rinput (get region of interest from interactive rectangle).
+Based on these tools, the package also provides graphical input functions for measuring/extracting data interactively from a figure, such as `ginput()` (get location of clicks), `linput()` (extract position from interactive line) and `rinput()` (get region of interest from interactive rectangle).
 
 Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, use `%matplotlib qt` or `%matplotlib tk` (or simply `%matplotlib`). The *MacOSX* backend can cause problems (see *Tips and Troubleshooting* below).
 
@@ -15,6 +15,7 @@ Matplotlib must be using an interactive backend such as Qt or Tk. In Jupyter, us
 
 ### Graphical input functions
 - **ginput** is a function based on the Cursor class that returns position data from clicks/keystrokes.
+- **linput** is a function based on the Line class that returns position data of the edges of an interactive line.
 - **rinput** is a function based on the Rect class that returns position data delimited by an interactive rectangle.
 
 ### Other
@@ -45,7 +46,7 @@ python -m drapo.demo
 To use individual objects and functions:
 
 ```python
-from drapo import Line, Cursor, Rect, ClickFig, ginput, rinput
+from drapo import Line, Cursor, Rect, ClickFig, ginput, linput, rinput
 ```
 
 ## Draggable objects
@@ -72,6 +73,8 @@ See ClickFig below to activate axes interactively to be able to create the objec
 - Left click or press <kbd>a</kbd> to add point.
 - Right click or press <kbd>z</kbd> to remove point.
 - Middle click or press <kbd>enter</kbd> to finish input.
+
+`linput()` will instantiate an interactive line and return its position as a tuple ((x1, y1), (x2, y2)) when the <kbd>enter</kbd> key is pressed.
 
 `rinput()` will instantiate an interactive rectangle and return its position as a tuple (xmin, ymin, width, height) when the <kbd>enter</kbd> key is pressed.
 
