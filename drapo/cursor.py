@@ -39,6 +39,8 @@ class Cursor(InteractiveObject):
     - `c` (shortcut for `color`)
     - `linestyle` (matplotlib's linestyle, default: dotted ':').
     - `linewidth` (float, default: 1.0). Line width.
+    - `horizontal`: if True (default), display horizontal line of cursor
+    - `vertical`: if True (default), display vertical line of cursor
     - `blit` (bool, default: True). Blitting for performance.
     - `show_clicks` (bool, default:False). Mark location of clicks.
     - `record_clicks` (bool, default False). Create a list of click positions.
@@ -76,6 +78,7 @@ class Cursor(InteractiveObject):
     name = 'Cursor'
 
     def __init__(self, fig=None, color=None, c=None, linestyle=':', linewidth=1,
+                 horizontal=True, vertical=True,
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
@@ -94,6 +97,8 @@ class Cursor(InteractiveObject):
         self.width = linewidth
         self.marksymbol = mark_symbol
         self.marksize = mark_size
+        self.horizontal = horizontal
+        self.vertical = vertical
 
         # Recording click options
         self.markclicks = show_clicks
@@ -151,19 +156,28 @@ class Cursor(InteractiveObject):
         self.delete_others('fig')  # delete all other existing cursors on the figure
 
         x, y = event.xdata, event.ydata
+
         # horizontal and vertical cursor lines, the animated option is for blitting
-        hline, = ax.plot([xmin, xmax], [y, y], color=self.color,
-                         linewidth=self.width, linestyle=self.style,
-                         animated=self.__class__.blit)
-        vline, = ax.plot([x, x], [ymin, ymax], color=self.color,
-                         linewidth=self.width, linestyle=self.style,
-                         animated=self.__class__.blit)
+
+        self.cursor_lines = {}
+
+        if self.horizontal:
+            hline, = ax.plot([xmin, xmax], [y, y], color=self.color,
+                             linewidth=self.width, linestyle=self.style,
+                             animated=self.__class__.blit)
+            self.cursor_lines['horizontal'] = hline
+
+        if self.vertical:
+            vline, = ax.plot([x, x], [ymin, ymax], color=self.color,
+                             linewidth=self.width, linestyle=self.style,
+                             animated=self.__class__.blit)
+            self.cursor_lines['vertical'] = vline
 
         # because plotting the lines can change the initial xlim, ylim
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        self.all_artists = hline, vline
+        self.all_artists = tuple(self.cursor_lines.values())
         # Note: addition to all_objects is made automatically by InteractiveObject parent class
         self.__class__.moving_objects.add(self)
 
@@ -179,16 +193,19 @@ class Cursor(InteractiveObject):
         x = event.xdata  # For cursors it is sufficient to work with data coordinates
         y = event.ydata  # (no need to go to pixels as the cursor is always in axes)
 
-        hline, vline = self.all_artists
-
         # accommodates changes in axes limits while cursor is on
         xmin, xmax = self.ax.get_xlim()
         ymin, ymax = self.ax.get_ylim()
 
-        hline.set_xdata([xmin, xmax])
-        hline.set_ydata([y, y])
-        vline.set_xdata([x, x])
-        vline.set_ydata([ymin, ymax])
+        if self.horizontal:
+            hline = self.cursor_lines['horizontal']
+            hline.set_xdata([xmin, xmax])
+            hline.set_ydata([y, y])
+
+        if self.vertical:
+            vline = self.cursor_lines['vertical']
+            vline.set_xdata([x, x])
+            vline.set_ydata([ymin, ymax])
 
     def set_press_info(self, event):
         self.press_info = {'currently_pressed': True,
@@ -370,6 +387,8 @@ class Cursor(InteractiveObject):
 
 def ginput(n=1, timeout=0, show_clicks=True,
            mouse_add=1, mouse_pop=3, mouse_stop=2,
+           color=None, c=None, linestyle=':', linewidth=1,
+           horizontal=True, vertical=True,
            blit=True):
     """Improved ginput function (graphical data input) compared to Matplotlib's.
 
@@ -384,15 +403,23 @@ def ginput(n=1, timeout=0, show_clicks=True,
     Parameters
     ----------
     Parameters are exactly the same as matplotlib.pyplot.ginput, see
-    https://matplotlib.org/3.2.0/api/_as_gen/matplotlib.pyplot.ginput.html
-    with only an additional one: blit (bool, default True): see Cursor.
+    https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
+    with the following additional parameters (see drapo.Cursor):
+
+    - color / c (default None, i.e. auto)
+    - linestyle (default ':')
+    - linewidth (default 1)
+    - horizontal (default True)
+    - vertical (default True)
+    - blit (bool, default True)
 
     Returns
     -------
     List of tuples corresponding to the list of clicked (x, y) coordinates.
-
     """
     c = Cursor(block=True, record_clicks=True, show_clicks=show_clicks, n=n,
+               color=color, c=c, linestyle=linestyle, linewidth=linewidth,
+               horizontal=horizontal, vertical=vertical,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
                blit=blit)
     data = c.clickdata
