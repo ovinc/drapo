@@ -419,7 +419,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
     """
     c = Cursor(block=True, record_clicks=True, show_clicks=show_clicks, n=n,
                color=color, c=c, linestyle=linestyle, linewidth=linewidth,
-               horizontal=horizontal, vertical=vertical,
+               horizontal=horizontal, vertical=vertical, timeout=timeout,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
                blit=blit)
     data = c.clickdata

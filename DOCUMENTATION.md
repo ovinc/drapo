@@ -125,7 +125,7 @@ Other
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(fig=None, color=None, c=None, linestyle=':', linewidth=1, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000,block=False, timeout=0,  mark_symbol='+', mark_size=10)
+Cursor(fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000,block=False, timeout=0,  mark_symbol='+', mark_size=10)
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -164,6 +164,8 @@ without any other specification.
 - `c` (shortcut for `color`)
 - `linestyle` (matplotlib's linestyle, default: dotted ':').
 - `linewidth` (float, default: 1.0). Line width.
+- `horizontal`: if True (default), display horizontal line of cursor
+- `vertical`: if True (default), display vertical line of cursor
 - `blit` (bool, default: True). Blitting for performance.
 - `show_clicks` (bool, default:False). Mark location of clicks.
 - `record_clicks` (bool, default False). Create a list of click positions.
@@ -230,15 +232,23 @@ zooming if blitting is activated, but one needs to move the mouse.
 Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data.
 
 ```python
-data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, blit=True):
+data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1,
+           horizontal=True, vertical=True, blit=True):
 ```
 
 Key shortcuts and mouse clicks follow the Cursor class behavior, in particular the key shortcuts are `a`, `z`, `enter` (instead of *any key*, *backspace* and *enter*). See Cursor class documentation for more info. All Cursor class interactive features are usable.
 
 ### Parameters
 Parameters are exactly the same as matplotlib.pyplot.ginput, see
-https://matplotlib.org/3.2.0/api/_as_gen/matplotlib.pyplot.ginput.html
-with only an additional one: blit (bool, default True): see Cursor.
+    https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
+    with the following additional parameters (see drapo.Cursor):
+
+    - color / c (default None, i.e. auto)
+    - linestyle (default ':')
+    - linewidth (default 1)
+    - horizontal (default True)
+    - vertical (default True)
+    - blit (bool, default True)
 
 ### Returns
 List of tuples corresponding to the list of clicked (x, y) coordinates.
@@ -252,6 +262,15 @@ Select position of line edges on figure with interactive line (enter to validate
 ```python
 position = linput():   # (x1, y1), (x2, y2)
 ```
+
+### Parameters
+
+Same as drapo.Line(), but `block` remains always True by default.
+
+
+### Returns
+
+Tuple of tuples ((x1, y1), (x2, y2)) of data coordinates (unordered).
 
 
 ## rinput function
