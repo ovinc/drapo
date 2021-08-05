@@ -145,6 +145,9 @@ class Cursor(InteractiveObject):
 
     name = 'Cursor'
 
+    commands_color = ['shift+right', 'shift+left']  # keys to change color
+    commands_width = ['shift+up', 'shift+down']
+
     def __init__(self, fig=None, color=None, c=None, linestyle=':', linewidth=1,
                  horizontal=True, vertical=True,
                  blit=True, show_clicks=False, record_clicks=False,
@@ -231,15 +234,15 @@ class Cursor(InteractiveObject):
         self.cursor_lines = {}
 
         if self.horizontal:
-            hline, = ax.plot([xmin, xmax], [y, y], color=self.color,
-                             linewidth=self.width, linestyle=self.style,
-                             animated=self.__class__.blit)
+            hline = ax.axhline(y=y, color=self.color,
+                               linewidth=self.width, linestyle=self.style,
+                               animated=self.__class__.blit)
             self.cursor_lines['horizontal'] = hline
 
         if self.vertical:
-            vline, = ax.plot([x, x], [ymin, ymax], color=self.color,
-                             linewidth=self.width, linestyle=self.style,
-                             animated=self.__class__.blit)
+            vline = ax.axvline(x=x, color=self.color,
+                               linewidth=self.width, linestyle=self.style,
+                               animated=self.__class__.blit)
             self.cursor_lines['vertical'] = vline
 
         # because plotting the lines can change the initial xlim, ylim
@@ -268,13 +271,11 @@ class Cursor(InteractiveObject):
 
         if self.horizontal:
             hline = self.cursor_lines['horizontal']
-            hline.set_xdata([xmin, xmax])
-            hline.set_ydata([y, y])
+            hline.set_ydata(y)
 
         if self.vertical:
             vline = self.cursor_lines['vertical']
-            vline.set_xdata([x, x])
-            vline.set_ydata([ymin, ymax])
+            vline.set_xdata(x)
 
     def set_press_info(self, event):
         self.press_info = {'currently_pressed': True,
@@ -394,40 +395,35 @@ class Cursor(InteractiveObject):
         """
 # ----------------- changes in appearance of cursor --------------------------
 
-        commands_color = ['shift+right', 'shift+left']  # keys to change color
-        commands_width = ['shift+up', 'shift+down']
-
         if event.key == " ":  # Space Bar
             if self.inaxes:  # create or delete cursor only if it's in axes
                 self.erase() if self.visible else self.create(event)
             self.visible = not self.visible  # always change visibility status
 
-        if event.key == commands_width[0]:
+        elif event.key == self.commands_width[0]:
             self.width += 0.5
 
-        if event.key == commands_width[1]:
+        elif event.key == self.commands_width[1]:
             self.width = self.width - 0.5 if self.width > 0.5 else 0.5
 
-        if event.key in commands_color:
+        elif event.key in self.commands_color:
             # finds at which position the current color is in the list
             colorindex = self.__class__.colors.index(self.color)
-            if event.key == commands_color[1]:
+            if event.key == self.commands_color[1]:
                 colorindex -= 1
             else:
                 colorindex += 1
             colorindex = colorindex % len(self.__class__.colors)
             self.color = self.__class__.colors[colorindex]
 
-        if event.key in commands_color + commands_width:
+        if event.key in self.commands_color + self.commands_width:
             self.erase()  # easy way to not have to update artist
             self.create(event)
 
 # ------------------- recording or removing click data -----------------------
 
-        x, y = (event.xdata, event.ydata)
-
         if event.key == 'a':
-            self.add_point((x, y))
+            self.add_point(event.xydata)
 
         # I use 'z' here because backspace (as used in ginput) interferes
         # with the interactive "back" option in matplotlib
