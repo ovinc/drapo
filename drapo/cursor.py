@@ -371,13 +371,6 @@ class Cursor(InteractiveObject):
         if self.visible and self.inaxes:
             self.create(event)
 
-        # I don't understand why I need to do the hack below to not have a
-        # strange re-appearance of the background before zooming (panning is ok)
-        # when the mouse go into motion again (not rightaway). Even more
-        # surprising is that if I shortcut on_motion by calling update_graph
-        # directly here, it does not work.
-        self.__class__.initiating_motion = True  # to reactivate cursor
-
         # See if click needs to be recorded / deleted / stopped --------------
 
         position = (event.xdata, event.ydata)
@@ -394,6 +387,10 @@ class Cursor(InteractiveObject):
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
+
+        # Update graph to redraw cursor etc. (kind of a hack):
+        self.__class__.initiating_motion = True
+        self.update_graph(event)
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
