@@ -117,15 +117,15 @@ class Cursor(InteractiveObject):
     - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
     The last 3 parameters customize appearance of click marks when shown.
-    - `mark_shape` (matplolib's symbol, default: '+')
-    - `mark_size` (matplotlib's markersize, default: None, see below)
-    - `mark_style` (matplotlib linestyle, if applicable)
+    - `marker` (matplolib's symbol, default: '+')
+    - `marker_size` (matplotlib's markersize, default: None, see below)
+    - `marker_style` (matplotlib linestyle, if applicable)
 
-    `mark_shape` can be any matplotlib marker (e.g. 'o', 'x', etc.), but also
+    `marker` can be any matplotlib marker (e.g. 'o', 'x', etc.), but also
     'hline' (full horizontal line), 'vline' (full vertical line), 'crosshair'
     (both vertical and horizontal lines spanning axes). In these last 3
-    situations, `mark_size` refers to linewidth, and `mark_style` to the
-    linestyle; `mark_style` does not apply to regular matplotlib markers.
+    situations, `marker_size` refers to linewidth, and `marker_style` to the
+    linestyle; `marker_style` does not apply to regular matplotlib markers.
 
     Useful class methods
     --------------------
@@ -150,7 +150,7 @@ class Cursor(InteractiveObject):
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
-                 mark_shape='+', mark_size=None, mark_syle='-'):
+                 marker='+', marker_size=None, marker_style='-'):
         """Note: cursor drawn only when the mouse enters axes."""
 
         super().__init__(fig, color=color, c=c, blit=blit, block=block)
@@ -163,9 +163,9 @@ class Cursor(InteractiveObject):
         # Appearance options
         self.style = linestyle
         self.width = linewidth
-        self.markshape = mark_shape
-        self.marksize = mark_size
-        self.markstyle = mark_syle
+        self.markshape = marker
+        self.marksize = marker_size
+        self.markstyle = marker_style
         self.horizontal = horizontal
         self.vertical = vertical
 
@@ -458,7 +458,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
            mouse_add=1, mouse_pop=3, mouse_stop=2,
            color=None, c=None, linestyle=':', linewidth=1,
            horizontal=True, vertical=True,
-           mark_shape='+', mark_size=None, mark_style='-',
+           marker='+', marker_size=None, marker_style='-',
            blit=True):
     """Improved ginput function (graphical data input) compared to Matplotlib's.
 
@@ -481,7 +481,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
     - linewidth (default 1)
     - horizontal (default True)
     - vertical (default True)
-    - mark_shape / mark_size / mark_style (click marker appearance)
+    - marker / marker_size / marker_style (click marker appearance)
     - blit (bool, default True)
 
     Returns
@@ -492,7 +492,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
                color=color, c=c, linestyle=linestyle, linewidth=linewidth,
                horizontal=horizontal, vertical=vertical, timeout=timeout,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
-               mark_shape=mark_shape, mark_size=mark_size, mark_syle=mark_style,
+               marker=marker, marker_size=marker_size, marker_style=marker_style,
                blit=blit)
     data = c.clickdata
     time.sleep(0.2)  # just to have time to see the last click and its mark

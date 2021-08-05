@@ -125,7 +125,7 @@ Other
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000,block=False, timeout=0,  mark_symbol='+', mark_size=10)
+Cursor(self, fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000, block=False, timeout=0, marker='+', marker_size=None, marker_style='-')
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -180,9 +180,16 @@ The 3 following parameters are useful for ginput-like functions.
 - `block` (bool, default False). Block console until nclicks is reached.
 - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
-The last 2 parameters customize appearance of click marks when shown.
-- `mark_symbol` (matplolib's symbol, default: '+')
-- `mark_size` (matplotlib's markersize, default: 10)
+The last 3 parameters customize appearance of click marks when shown.
+- `marker` (matplolib's symbol, default: '+')
+- `marker_size` (matplotlib's markersize, default: None, see below)
+- `marker_style` (matplotlib linestyle, if applicable)
+
+`marker` can be any matplotlib marker (e.g. 'o', 'x', etc.), but also
+'hline' (full horizontal line), 'vline' (full vertical line), 'crosshair'
+(both vertical and horizontal lines spanning axes). In these last 3
+situations, `marker_size` refers to linewidth, and `marker_style` to the
+linestyle; `marker_style` does not apply to regular matplotlib markers.
 
 
 ### Useful class methods
@@ -232,23 +239,23 @@ zooming if blitting is activated, but one needs to move the mouse.
 Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data.
 
 ```python
-data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1,
-           horizontal=True, vertical=True, blit=True):
+data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, marker='+', marker_size=None, marker_style='-', blit=True):
 ```
 
 Key shortcuts and mouse clicks follow the Cursor class behavior, in particular the key shortcuts are `a`, `z`, `enter` (instead of *any key*, *backspace* and *enter*). See Cursor class documentation for more info. All Cursor class interactive features are usable.
 
 ### Parameters
 Parameters are exactly the same as matplotlib.pyplot.ginput, see
-    https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
-    with the following additional parameters (see drapo.Cursor):
+https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
+with the following additional parameters (see drapo.Cursor):
 
-    - color / c (default None, i.e. auto)
-    - linestyle (default ':')
-    - linewidth (default 1)
-    - horizontal (default True)
-    - vertical (default True)
-    - blit (bool, default True)
+- color / c (default None, i.e. auto)
+- linestyle (default ':')
+- linewidth (default 1)
+- horizontal (default True)
+- vertical (default True)
+- marker / marker_size / marker_style (click marker appearance)
+- blit (bool, default True)
 
 ### Returns
 List of tuples corresponding to the list of clicked (x, y) coordinates.
