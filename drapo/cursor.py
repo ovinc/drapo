@@ -145,8 +145,24 @@ class Cursor(InteractiveObject):
 
     name = 'Cursor'
 
-    commands_color = ['shift+right', 'shift+left']  # keys to change color
-    commands_width = ['shift+up', 'shift+down']
+    # keyboard shortcuts to change color
+    commands_color = {'next color': 'shift+right',
+                      'previous color': 'shift+left'}
+
+    # keyboard shortcuts to change line width
+    commands_width = {'increase width': 'shift+up',
+                      'decrease width': 'shift+down'}
+
+    # List of all commands above
+    commands_color_or_width = list(commands_color.values()) +\
+                              list(commands_width.values())
+
+    # other keyboard shortcuts
+    commands_misc = {'add point': 'a',
+                     'remove point': 'z',
+                     'toggle visibility': ' '}  # space bar
+
+    commands_all = commands_color_or_width + list(commands_misc.values())
 
     def __init__(self, fig=None, color=None, c=None, linestyle=':', linewidth=1,
                  horizontal=True, vertical=True,
@@ -265,10 +281,6 @@ class Cursor(InteractiveObject):
         x = event.xdata  # For cursors it is sufficient to work with data coordinates
         y = event.ydata  # (no need to go to pixels as the cursor is always in axes)
 
-        # accommodates changes in axes limits while cursor is on
-        xmin, xmax = self.ax.get_xlim()
-        ymin, ymax = self.ax.get_ylim()
-
         if self.horizontal:
             hline = self.cursor_lines['horizontal']
             hline.set_ydata(y)
@@ -366,14 +378,15 @@ class Cursor(InteractiveObject):
         # directly here, it does not work.
         self.__class__.initiating_motion = True  # to reactivate cursor
 
-        # See if click needs to be recorded.
+        # See if click needs to be recorded / deleted / stopped --------------
 
-        x, y = (event.xdata, event.ydata)
+        position = (event.xdata, event.ydata)
+
         # line below avoids recording clicks during panning/zooming
-        if (x, y) == self.press_info['click_position']:
+        if position == self.press_info['click_position']:
 
             if event.button == self.clickbutton:
-                self.add_point((x, y))
+                self.add_point(position)
 
             elif event.button == self.removebutton:
                 self.remove_point()
@@ -395,46 +408,47 @@ class Cursor(InteractiveObject):
         """
 # ----------------- changes in appearance of cursor --------------------------
 
-        if event.key == " ":  # Space Bar
+        if event.key == self.commands_misc['toggle visibility']:  # Space Bar
             if self.inaxes:  # create or delete cursor only if it's in axes
                 self.erase() if self.visible else self.create(event)
             self.visible = not self.visible  # always change visibility status
 
-        elif event.key == self.commands_width[0]:
+        elif event.key == self.commands_width['increase width']:
             self.width += 0.5
 
-        elif event.key == self.commands_width[1]:
+        elif event.key == self.commands_width['decrease width']:
             self.width = self.width - 0.5 if self.width > 0.5 else 0.5
 
-        elif event.key in self.commands_color:
+        elif event.key in self.commands_color.values():
             # finds at which position the current color is in the list
             colorindex = self.__class__.colors.index(self.color)
-            if event.key == self.commands_color[1]:
-                colorindex -= 1
-            else:
+            if event.key == self.commands_color['next color']:
                 colorindex += 1
+            else:
+                colorindex -= 1
             colorindex = colorindex % len(self.__class__.colors)
             self.color = self.__class__.colors[colorindex]
 
-        if event.key in self.commands_color + self.commands_width:
-            self.erase()  # easy way to not have to update artist
-            self.create(event)
-
 # ------------------- recording or removing click data -----------------------
 
-        if event.key == 'a':
-            self.add_point(event.xydata)
+        elif event.key == self.commands_misc['add point']:
+            self.add_point((event.xdata, event.ydata))
 
         # I use 'z' here because backspace (as used in ginput) interferes
         # with the interactive "back" option in matplotlib
-        elif event.key == 'z':
+        elif event.key == self.commands_misc['remove point']:
             self.remove_point()
 
 # --------------------implement changes on graph -----------------------------
 
-        # hack to see changes directly and to prevent display bugs
-        self.__class__.initiating_motion = True
-        self.update_graph(event)
+        if event.key in self.commands_color_or_width:
+            self.erase()  # easy way to not have to update artist
+            self.create(event)
+
+        if event.key in self.commands_all:
+            # hack to see changes directly and to prevent display bugs
+            self.__class__.initiating_motion = True
+            self.update_graph(event)
 
 # ------------------------ stop if necessary ---------------------------------
 
