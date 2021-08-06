@@ -6,7 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import Line, ginput, rinput
+from . import Line, ginput, rinput, Cursor
 
 
 def demo_figure():
@@ -55,6 +55,8 @@ def demo(blit=True, backend=None):
     fig.suptitle('Line()', fontsize=16)
     Line(c='k', linewidth=2, ptstyle='s', ptsize=8)
     Line(c='seagreen', linewidth=4)
+
+    Cursor()
 
     # The last object imposes blitting behavior of all objects
     Line(linestyle='--', linewidth=1, ptstyle='o', blit=blit)

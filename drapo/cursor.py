@@ -201,7 +201,7 @@ class Cursor(InteractiveObject):
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
 
-        self.fig.canvas.draw()
+        self.fig.canvas.draw()  ## see if useful
 
         # the blocking option below needs to be after connect()
         if self.block:
@@ -209,8 +209,7 @@ class Cursor(InteractiveObject):
 
     def __repr__(self):
 
-        name = self.__class__.name
-        base_message = f'{name} on Fig. {self.fig.number}.'
+        base_message = f'{self.name} on Fig. {self.fig.number}.'
 
         if self.clickbutton == 1:
             button = "left"
@@ -252,13 +251,13 @@ class Cursor(InteractiveObject):
         if self.horizontal:
             hline = ax.axhline(y=y, color=self.color,
                                linewidth=self.width, linestyle=self.style,
-                               animated=self.__class__.blit)
+                               animated=InteractiveObject.blit)
             self.cursor_lines['horizontal'] = hline
 
         if self.vertical:
             vline = ax.axvline(x=x, color=self.color,
                                linewidth=self.width, linestyle=self.style,
-                               animated=self.__class__.blit)
+                               animated=InteractiveObject.blit)
             self.cursor_lines['vertical'] = vline
 
         # because plotting the lines can change the initial xlim, ylim
@@ -267,13 +266,15 @@ class Cursor(InteractiveObject):
 
         self.all_artists = tuple(self.cursor_lines.values())
         # Note: addition to all_objects is made automatically by InteractiveObject parent class
-        self.__class__.moving_objects.add(self)
+        InteractiveObject.moving_objects.add(self)
 
         # Below is for cursor to be visible upon creation
-        if self.__class__.blit:
-            self.fig.canvas.blit(self.ax.bbox)
+        if InteractiveObject.blit:
+            pass
+            # self.fig.canvas.blit(self.ax.bbox)
         else:
-            self.fig.canvas.draw()
+            pass
+            # self.fig.canvas.draw()
 
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
@@ -289,15 +290,18 @@ class Cursor(InteractiveObject):
             vline = self.cursor_lines['vertical']
             vline.set_xdata(x)
 
+    def reset_after_motion(self):
+        pass
+
     def set_press_info(self, event):
-        self.press_info = {'currently_pressed': True,
-                           'click_position': (event.xdata, event.ydata)}
+        self.press_info = {'currently pressed': True,
+                           'click position': (event.xdata, event.ydata)}
 
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
         for mark in self.marks:
             mark.remove()
-        self.fig.canvas.draw()
+        # self.fig.canvas.draw()
 
     def erase_data(self):
         """Erase data of recorded clicks"""
@@ -305,20 +309,26 @@ class Cursor(InteractiveObject):
 
     def add_point(self, position):
         """Add point to the click data (triggered by click or key press)"""
+
         if self.recordclicks:
+
             self.clickdata.append(position)
             self.clicknumber += 1
 
         if self.markclicks:
+
             mark = Marker(self.ax, position, color=self.color,
                           shape=self.markshape, size=self.marksize,
                           style=self.markstyle)
             self.marks.append(mark)
-        self.fig.canvas.draw()
+
+            self._reset_background()
 
     def remove_point(self):
         """Add point to the click data (triggered by click or key press)"""
+
         if self.recordclicks:
+
             if self.clicknumber == 0:
                 pass
             else:
@@ -326,12 +336,32 @@ class Cursor(InteractiveObject):
                 self.clickdata.pop(-1)  # remove last element
 
         if self.markclicks:
+
             if len(self.marks) == 0:
                 pass
             else:
                 mark = self.marks.pop(-1)
                 mark.remove()
-        self.fig.canvas.draw()
+
+            self._reset_background()
+
+    def _reset_background(self):
+        """Reset background in blitting mode if markers have been added/removed."""
+        canvas = self.fig.canvas
+        canvas.draw()
+        InteractiveObject.background = canvas.copy_from_bbox(self.ax.bbox)
+        canvas.restore_region(InteractiveObject.background)
+
+    def _redraw_cursor(self):
+        """Redraw cursor, for use in blitting mode.
+
+        Used to make cursor immediately visible after clicks, or after changes
+        of appearance (thickness, color, etc.)
+        """
+        for obj in InteractiveObject.moving_objects:
+            for artist in obj.all_artists:
+                self.ax.draw_artist(artist)
+        self.fig.canvas.blit(self.ax.bbox)
 
 # ============================= callback methods =============================
 
@@ -341,19 +371,24 @@ class Cursor(InteractiveObject):
         self.ax = event.inaxes
         if self.visible:
             self.create(event)
-        if self.__class__.blit:
-            self.__class__.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+        if InteractiveObject.blit:
+            InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
         self.inaxes = False
-        if self.visible and not self.press_info['currently_pressed']:
+        if self.visible and not self.press_info['currently pressed']:
             self.erase()
 
     def on_motion(self, event):
-        """Update position of the cursor when mouse is in motion."""
-        # do nothing if pressed to avoid weird interactions with panning
-        if self.visible and self.inaxes and not self.press_info['currently_pressed']:
+        """Update position of the cursor when mouse is in motion.
+
+        Do nothing if pressed to avoid weird interactions with panning.
+        Note that update_graph() is not called when other interactive objects
+        are moving (and thus when a leader is already updating the graph),
+        because this happens only when the mouse is currently pressed.
+        """
+        if self.visible and self.inaxes and not self.press_info['currently pressed']:
             self.update_graph(event)
 
     def on_mouse_press(self, event):
@@ -367,7 +402,7 @@ class Cursor(InteractiveObject):
 
         This is in order to accommodate potential zooming/panning.
         """
-        self.press_info['currently_pressed'] = False
+        self.press_info['currently pressed'] = False
         if self.visible and self.inaxes:
             self.create(event)
 
@@ -376,7 +411,7 @@ class Cursor(InteractiveObject):
         position = (event.xdata, event.ydata)
 
         # line below avoids recording clicks during panning/zooming
-        if position == self.press_info['click_position']:
+        if position == self.press_info['click position']:
 
             if event.button == self.clickbutton:
                 self.add_point(position)
@@ -388,9 +423,17 @@ class Cursor(InteractiveObject):
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
-        # Update graph to redraw cursor etc. (kind of a hack):
-        self.__class__.initiating_motion = True
-        self.update_graph(event)
+        if len(InteractiveObject.non_cursor_moving_objects()) == 0:
+            print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
+            self.fig.canvas.draw()
+            InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+            # self.fig.canvas.restore_region(InteractiveObject.background)
+            for artist in self.all_artists:
+                self.ax.draw_artist(artist)
+
+        self.fig.canvas.blit(self.ax.bbox)
+
+        # self._redraw_cursor()
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -418,13 +461,13 @@ class Cursor(InteractiveObject):
 
         elif event.key in self.commands_color.values():
             # finds at which position the current color is in the list
-            colorindex = self.__class__.colors.index(self.color)
+            colorindex = InteractiveObject.colors.index(self.color)
             if event.key == self.commands_color['next color']:
                 colorindex += 1
             else:
                 colorindex -= 1
-            colorindex = colorindex % len(self.__class__.colors)
-            self.color = self.__class__.colors[colorindex]
+            colorindex = colorindex % len(InteractiveObject.colors)
+            self.color = InteractiveObject.colors[colorindex]
 
 # ------------------- recording or removing click data -----------------------
 
@@ -444,8 +487,9 @@ class Cursor(InteractiveObject):
 
         if event.key in self.commands_all:
             # hack to see changes directly and to prevent display bugs
-            self.__class__.initiating_motion = True
-            self.update_graph(event)
+            # InteractiveObject.initiating_motion = True
+            # self.update_graph(event)
+            self._redraw_cursor()
 
 # ------------------------ stop if necessary ---------------------------------
 

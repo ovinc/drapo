@@ -64,12 +64,12 @@ class InteractiveObject:
         # is picked, but the two edge points need to be moving/active as well.
 
         self.moving = False  # faster way to check moving objects than to measure the length of moving_objects
-        self.press_info = {'currently_pressed': False}  # stores useful useful mouse click information
+        self.press_info = {'currently pressed': False}  # stores useful useful mouse click information
 
         # the last object to be instanciated dictates if blitting is true or not
-        self.__class__.blit = blit
+        InteractiveObject.blit = blit
         # Reset leading artist when instanciating a new object
-        self.__class__.leader = None
+        InteractiveObject.leader = None
 
         # defines whether the interactive object is blocking the console or not
         self.block = block
@@ -80,14 +80,14 @@ class InteractiveObject:
             color = c
 
         if color is None:
-            self.color = self.__class__.colors[0]
+            self.color = InteractiveObject.colors[0]
         elif not is_color_like(color):
             print('Warning: color not recognized. Falling back to default.')
-            self.color = self.__class__.colors[0]
+            self.color = InteractiveObject.colors[0]
         else:
             self.color = color
-            if color not in self.__class__.colors:
-                self.__class__.colors.append(color)
+            if color not in InteractiveObject.colors:
+                InteractiveObject.colors.append(color)
 
         # --------------------------------------------------------------------
 
@@ -108,11 +108,10 @@ class InteractiveObject:
             n = objects_on_fig.index(self) + 1
         except ValueError:  # means object has been deleted
             n = 'deleted'
-        name = self.__class__.name
-        return f'{name} #{n}/{n_on_fig} in Fig. {self.fig.number}.'
+        return f'{self.name} #{n}/{n_on_fig} in Fig. {self.fig.number}.'
 
     def __str__(self):
-        # name = self.__class__.name
+        # name = InteractiveObject.name
         # return f'{name} on Fig. {self.fig.number}.'
         return self.__repr__()
 
@@ -124,29 +123,30 @@ class InteractiveObject:
         canvas = self.fig.canvas
         ax = self.ax
 
-        if self.__class__.blit and self.__class__.initiating_motion:
+        if InteractiveObject.blit and InteractiveObject.initiating_motion:
             canvas.draw()
-            self.__class__.background = canvas.copy_from_bbox(ax.bbox)
-            self.__class__.initiating_motion = False
+            InteractiveObject.background = canvas.copy_from_bbox(ax.bbox)
+            InteractiveObject.initiating_motion = False
+            print('initiating')
 
-        if self.__class__.blit:
+        if InteractiveObject.blit:
             # without this line, the graph keeps all successive positions of
             # the cursor on the screen
-            canvas.restore_region(self.__class__.background)
+            canvas.restore_region(InteractiveObject.background)
 
         # now the leader triggers update of all moving artists including itself
-        for obj in self.__class__.moving_objects:
+        for obj in InteractiveObject.moving_objects:
 
             # update position data of object depending on its motion mode
             obj.update_position(event)
 
             # Draw all artists of the object (if not, some can miss in motion)
-            if self.__class__.blit:
+            if InteractiveObject.blit:
                 for artist in obj.all_artists:
                     ax.draw_artist(artist)
 
         # without this below, the graph is not updated
-        if self.__class__.blit:
+        if InteractiveObject.blit:
             canvas.blit(ax.bbox)
         else:
             canvas.draw()
@@ -160,18 +160,21 @@ class InteractiveObject:
         triggers re-drawing of all other moving lines.
         Note : all moving lines are necesary on the same axes"""
 
-        if self.__class__.leader is None:
-            self.__class__.leader = self
+        if InteractiveObject.leader is None:
+            InteractiveObject.leader = self
             # Below is to delay background setting for blitting until all
             # artists have been defined as animated.
             # This is because the canvas.draw() and/or canvas_copy_from_bbox()
             # calls need to be made with all moving artists declared as animated
-            self.__class__.initiating_motion = True
+            InteractiveObject.initiating_motion = True
             self.fig.canvas.draw()
+            print(f'{self} is leader')
+        else:
+            print(f'{self} is not leader')
 
-        self.__class__.moving_objects.add(self)
+        InteractiveObject.moving_objects.add(self)
         self.moving = True
-        if self.__class__.blit:
+        if InteractiveObject.blit:
             for artist in self.all_artists:
                 artist.set_animated(True)
 
@@ -192,18 +195,18 @@ class InteractiveObject:
 
         self.picked_artists = set()
         self.active_info = {}
-        self.press_info = {'currently_pressed': False}
+        self.press_info = {'currently pressed': False}
         self.moving_positions = {}
         self.moving = False
 
-        if self.__class__.blit:
+        if InteractiveObject.blit:
             for artist in self.all_artists:
                 artist.set_animated(False)
 
         # Reset class variables that store moving information
-        self.__class__.moving_objects.remove(self)
-        if self is self.__class__.leader:
-            self.__class__.leader = None
+        InteractiveObject.moving_objects.remove(self)
+        if self is InteractiveObject.leader:
+            InteractiveObject.leader = None
 
     def set_press_info(self, event):
         """Records information related to the mouse click, in px coordinates."""
@@ -229,14 +232,14 @@ class InteractiveObject:
         self.fig.canvas.draw()
 
         # Check if object is listed as still moving, and remove it.
-        moving_objects = self.__class__.moving_objects
+        moving_objects = InteractiveObject.moving_objects
         if self in moving_objects:
             moving_objects.remove(self)
 
         if option == 'erase':
             pass
         elif option == 'delete':
-            self.__class__.all_interactive_objects.remove(self)
+            InteractiveObject.all_interactive_objects.remove(self)
             self.disconnect()
             if self.block:
                 self.fig.canvas.stop_event_loop()
@@ -261,7 +264,7 @@ class InteractiveObject:
         else:
             option, *_ = args
 
-        all_instances = self.__class__.class_objects()
+        all_instances = InteractiveObject.class_objects()
 
         if option == 'all':
             instances = all_instances
@@ -298,13 +301,21 @@ class InteractiveObject:
     def class_objects(cls):
         """Return all instances of a given class, excluding parent class."""
         # note : isinstance(obj, class) would also return the parent's objects
-        instances = [obj for obj in cls.all_objects() if type(obj) is cls]
-        return instances
+        return [obj for obj in cls.all_objects() if type(obj) is cls]
 
     @classmethod
     def all_objects(cls):
         """Return all interactive objects, including parents and subclasses."""
         return cls.all_interactive_objects
+
+    @classmethod
+    def cursor_moving_objects(cls):
+        return [obj for obj in cls.moving_objects if obj.name == 'Cursor']
+
+    @classmethod
+    def non_cursor_moving_objects(cls):
+        """Objects currently moving but which are not cursor"""
+        return set(cls.moving_objects) - set(cls.cursor_moving_objects())
 
     @classmethod
     def clear(cls):
@@ -406,20 +417,23 @@ class InteractiveObject:
         if not self.moving:
             return
         # only the leader triggers moving events (others drawn in update_graph)
-        if self.__class__.leader is self:
+        if InteractiveObject.leader is self:
             self.update_graph(event)
 
     def on_mouse_release(self, event):
         """When mouse released, reset attributes to non-moving"""
-        if self not in self.__class__.moving_objects:
-            return
-        else:
+        if self in InteractiveObject.moving_objects:
             self.reset_after_motion()
+
+            if len(InteractiveObject.non_cursor_moving_objects()) == 0:
+                print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
+                self.fig.canvas.draw()
+                InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
     # key events  ------------------------------------------------------------
 
     def on_key_press(self, event):
-        print(f'Key Press: {event.key}')
+        print(f'Key Press: {event.key}')  # For testing purposes
         pass
 
     def on_key_release(self, event):
