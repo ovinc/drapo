@@ -146,12 +146,12 @@ class Cursor(InteractiveObject):
     name = 'Cursor'
 
     # keyboard shortcuts to change color
-    commands_color = {'next color': 'shift+right',
-                      'previous color': 'shift+left'}
+    commands_color = {'next color': 'alt+right',
+                      'previous color': 'alt+left'}
 
     # keyboard shortcuts to change line width
-    commands_width = {'increase width': 'shift+up',
-                      'decrease width': 'shift+down'}
+    commands_width = {'increase width': 'alt+up',
+                      'decrease width': 'alt+down'}
 
     # List of all commands above
     commands_color_or_width = list(commands_color.values()) +\
@@ -160,7 +160,8 @@ class Cursor(InteractiveObject):
     # other keyboard shortcuts
     commands_misc = {'add point': 'a',
                      'remove point': 'z',
-                     'toggle visibility': ' '}  # space bar
+                     'toggle visibility': ' ',  # space bar
+                     'stop': 'enter'}
 
     commands_all = commands_color_or_width + list(commands_misc.values())
 
@@ -268,8 +269,9 @@ class Cursor(InteractiveObject):
 
         # Below is for cursor to be visible upon creation
         if InteractiveObject.blit:
-            self.update_background()
-            # self.restore_background()
+            self.update_background()  # for first instantiation or after pan/zoom
+            self.draw_artists()
+            self.fig.canvas.blit(self.ax.bbox)
         else:
             self.fig.canvas.draw()
 
@@ -307,19 +309,21 @@ class Cursor(InteractiveObject):
     def add_point(self, position):
         """Add point to the click data (triggered by click or key press)"""
 
-        if self.recordclicks:
+        if None in position:
+            return  # click / key press was made with mouse outside of axes
 
+        if self.recordclicks:
             self.clickdata.append(position)
             self.clicknumber += 1
 
         if self.markclicks:
-
             mark = Marker(self.ax, position, color=self.color,
                           shape=self.markshape, size=self.marksize,
                           style=self.markstyle)
             self.marks.append(mark)
 
-            self._reset_background()
+            self.fig.canvas.draw()
+            self.update_background()
 
     def remove_point(self):
         """Add point to the click data (triggered by click or key press)"""
@@ -340,23 +344,8 @@ class Cursor(InteractiveObject):
                 mark = self.marks.pop(-1)
                 mark.remove()
 
-            self._reset_background()
-
-    def _reset_background(self):
-        """Reset background in blitting mode if markers have been added/removed."""
-        canvas = self.fig.canvas
-        canvas.draw()
-        InteractiveObject.background = canvas.copy_from_bbox(self.ax.bbox)
-        canvas.restore_region(InteractiveObject.background)
-
-    def _redraw_cursor(self):
-        """Redraw cursor, for use in blitting mode.
-
-        Used to make cursor immediately visible after clicks, or after changes
-        of appearance (thickness, color, etc.)
-        """
-        self.draw_artists()
-        self.fig.canvas.blit(self.ax.bbox)
+            self.fig.canvas.draw()
+            self.update_background()
 
 # ============================= callback methods =============================
 
@@ -416,24 +405,24 @@ class Cursor(InteractiveObject):
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
+        # CHECK IF USEFUL AND IF INTERACTS WITH RESET_AFTER_MOTION !!
         if InteractiveObject.blit and len(InteractiveObject.non_cursor_moving_objects()) == 0:
             print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
             self.fig.canvas.draw()
             self.update_background()
             self.draw_artists()
 
+        # SEE IF USEFUL
         if InteractiveObject.blit:
             self.fig.canvas.blit(self.ax.bbox)
-
-        # self._redraw_cursor()
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
 
         All controls:
             - space bar: toggles cursor visibility
-            - up/down arrows: increase or decrease cursor size
-            - left/right arrows: cycles through colors
+            - Alt + up/down arrows: increase or decrease cursor size
+            - Alt + left/right arrows: cycles through colors
             - "a" : add point
             - "z" : cancel last point
             - enter : stop recording
@@ -477,16 +466,9 @@ class Cursor(InteractiveObject):
             self.erase()  # easy way to not have to update artist
             self.create(event)
 
-        if event.key in self.commands_all:
-            # hack to see changes directly and to prevent display bugs
-            # InteractiveObject.initiating_motion = True
-            # self.update_graph(event)
-            # pass
-            self._redraw_cursor()
-
 # ------------------------ stop if necessary ---------------------------------
 
-        if self.clicknumber == self.n or event.key == 'enter':
+        if self.clicknumber == self.n or event.key == self.commands_misc['stop']:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 

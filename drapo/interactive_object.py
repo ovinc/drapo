@@ -252,7 +252,11 @@ class InteractiveObject:
             artist.remove()
         self.all_artists = []
 
-        self.fig.canvas.draw()
+        if InteractiveObject.blit:
+            self.restore_background()
+            self.fig.canvas.blit(self.ax.bbox)
+        else:
+            self.fig.canvas.draw()
 
         # Check if object is listed as still moving, and remove it.
         moving_objects = InteractiveObject.moving_objects
