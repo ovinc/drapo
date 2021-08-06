@@ -201,8 +201,6 @@ class Cursor(InteractiveObject):
         self.clickdata = []  # stores the (x, y) data of clicks in a list
         self.marks = []  # list containing all artists drawn
 
-        self.fig.canvas.draw()  ## see if useful
-
         # the blocking option below needs to be after connect()
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)
@@ -270,11 +268,10 @@ class Cursor(InteractiveObject):
 
         # Below is for cursor to be visible upon creation
         if InteractiveObject.blit:
-            pass
-            # self.fig.canvas.blit(self.ax.bbox)
+            self.update_background()
+            # self.restore_background()
         else:
-            pass
-            # self.fig.canvas.draw()
+            self.fig.canvas.draw()
 
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
@@ -358,9 +355,7 @@ class Cursor(InteractiveObject):
         Used to make cursor immediately visible after clicks, or after changes
         of appearance (thickness, color, etc.)
         """
-        for obj in InteractiveObject.moving_objects:
-            for artist in obj.all_artists:
-                self.ax.draw_artist(artist)
+        self.draw_artists()
         self.fig.canvas.blit(self.ax.bbox)
 
 # ============================= callback methods =============================
@@ -369,10 +364,8 @@ class Cursor(InteractiveObject):
         """Create a cursor when mouse enters axes."""
         self.inaxes = True
         self.ax = event.inaxes
-        if self.visible:
+        if self.visible and not self.press_info['currently pressed']:
             self.create(event)
-        if InteractiveObject.blit:
-            InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
     def on_leave_axes(self, event):
         """Erase cursor when mouse leaves axes."""
@@ -410,12 +403,12 @@ class Cursor(InteractiveObject):
 
         position = (event.xdata, event.ydata)
 
-        # line below avoids recording clicks during panning/zooming
+        # line below avoids recording clicks during panning/zooming. It is
+        # read only when mouse release is at the same position as mouse press,
+        # i.e. when one has clicked to define a point and not to pan/zoom
         if position == self.press_info['click position']:
-
             if event.button == self.clickbutton:
                 self.add_point(position)
-
             elif event.button == self.removebutton:
                 self.remove_point()
 
@@ -423,15 +416,14 @@ class Cursor(InteractiveObject):
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
-        if len(InteractiveObject.non_cursor_moving_objects()) == 0:
+        if InteractiveObject.blit and len(InteractiveObject.non_cursor_moving_objects()) == 0:
             print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
             self.fig.canvas.draw()
-            InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
-            # self.fig.canvas.restore_region(InteractiveObject.background)
-            for artist in self.all_artists:
-                self.ax.draw_artist(artist)
+            self.update_background()
+            self.draw_artists()
 
-        self.fig.canvas.blit(self.ax.bbox)
+        if InteractiveObject.blit:
+            self.fig.canvas.blit(self.ax.bbox)
 
         # self._redraw_cursor()
 
@@ -489,6 +481,7 @@ class Cursor(InteractiveObject):
             # hack to see changes directly and to prevent display bugs
             # InteractiveObject.initiating_motion = True
             # self.update_graph(event)
+            # pass
             self._redraw_cursor()
 
 # ------------------------ stop if necessary ---------------------------------

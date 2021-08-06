@@ -31,7 +31,6 @@ def demo_figure():
     return fig, (ax1, ax2)
 
 
-
 def demo(blit=True, backend=None):
     """Example of various objects in different figures and axes (for testing)."""
 

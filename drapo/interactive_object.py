@@ -117,6 +117,21 @@ class InteractiveObject:
 
 # ================================== methods =================================
 
+    def update_background(self):
+        """Update background for blitting mode"""
+        canvas = self.fig.canvas
+        ax = self.ax
+        InteractiveObject.background = canvas.copy_from_bbox(ax.bbox)
+
+    def restore_background(self):
+        """Restore background, for blitting mode"""
+        self.fig.canvas.restore_region(InteractiveObject.background)
+
+    def draw_artists(self):
+        """Draw all artists of object, for blitting mode"""
+        for artist in self.all_artists:
+            self.ax.draw_artist(artist)
+
     def update_graph(self, event):
         """Update graph with the moving artists. Called only by the leader."""
 
@@ -125,14 +140,14 @@ class InteractiveObject:
 
         if InteractiveObject.blit and InteractiveObject.initiating_motion:
             canvas.draw()
-            InteractiveObject.background = canvas.copy_from_bbox(ax.bbox)
+            self.update_background()
             InteractiveObject.initiating_motion = False
             print('initiating')
 
         if InteractiveObject.blit:
             # without this line, the graph keeps all successive positions of
             # the cursor on the screen
-            canvas.restore_region(InteractiveObject.background)
+            self.restore_background()
 
         # now the leader triggers update of all moving artists including itself
         for obj in InteractiveObject.moving_objects:
@@ -142,8 +157,7 @@ class InteractiveObject:
 
             # Draw all artists of the object (if not, some can miss in motion)
             if InteractiveObject.blit:
-                for artist in obj.all_artists:
-                    ax.draw_artist(artist)
+                obj.draw_artists()
 
         # without this below, the graph is not updated
         if InteractiveObject.blit:
@@ -207,6 +221,15 @@ class InteractiveObject:
         InteractiveObject.moving_objects.remove(self)
         if self is InteractiveObject.leader:
             InteractiveObject.leader = None
+
+        # Once all motion has stopped (i.e. no more moving objects that are not
+        # a cursor -- by definition, cursor is always moving), redraw figure
+        # and add the objects (now stopped) to the blitting background
+        if len(InteractiveObject.non_cursor_moving_objects()) == 0:
+            print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
+            self.fig.canvas.draw()
+            if InteractiveObject.blit:
+                self.update_background()
 
     def set_press_info(self, event):
         """Records information related to the mouse click, in px coordinates."""
@@ -424,11 +447,6 @@ class InteractiveObject:
         """When mouse released, reset attributes to non-moving"""
         if self in InteractiveObject.moving_objects:
             self.reset_after_motion()
-
-            if len(InteractiveObject.non_cursor_moving_objects()) == 0:
-                print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
-                self.fig.canvas.draw()
-                InteractiveObject.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
     # key events  ------------------------------------------------------------
 
