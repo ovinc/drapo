@@ -43,11 +43,10 @@ class InteractiveObject:
     # class colors.
     colors = ['crimson', 'dimgray', 'whitesmoke', 'dodgerblue', 'lightgreen']
 
-    def __init__(self, fig=None, ax=None, color=None, c=None,
-                 blit=True, block=False):
+    def __init__(self, ax=None, color=None, c=None, blit=True, block=False):
 
-        self.fig = plt.gcf() if fig is None else fig
         self.ax = plt.gca() if ax is None else ax
+        self.fig = self.ax.figure
 
         # Connect matplotlib event handling to callback functions
         self.connect()

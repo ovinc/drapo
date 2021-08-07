@@ -95,7 +95,8 @@ class Cursor(InteractiveObject):
     ----------
     All parameters optional so that a cursor can be created by `Cursor()`.
 
-    - `fig` (matplotlib figure, default: current figure, specified as None).
+    - `ax` (matplotlib axes, default: current axes, specified as None).
+      (Note: Cursor can move on other axes of the same figure)
     - `color` (matplotlib's color, default: None (class default value)).
     - `c` (shortcut for `color`)
     - `linestyle` (matplotlib's linestyle, default: dotted ':').
@@ -165,7 +166,7 @@ class Cursor(InteractiveObject):
 
     commands_all = commands_color_or_width + list(commands_misc.values())
 
-    def __init__(self, fig=None, color=None, c=None, linestyle=':', linewidth=1,
+    def __init__(self, ax=None, color=None, c=None, linestyle=':', linewidth=1,
                  horizontal=True, vertical=True,
                  blit=True, show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
@@ -173,7 +174,7 @@ class Cursor(InteractiveObject):
                  marker='+', marker_size=None, marker_style='-'):
         """Note: cursor drawn only when the mouse enters axes."""
 
-        super().__init__(fig, color=color, c=c, blit=blit, block=block)
+        super().__init__(ax=ax, color=color, c=c, blit=blit, block=block)
 
         # Cursor state attributes
         self.press = False    # active when mouse is currently pressed
@@ -503,17 +504,15 @@ class Cursor(InteractiveObject):
             colorindex = colorindex % len(InteractiveObject.colors)
             self.color = InteractiveObject.colors[colorindex]
 
+        if event.key in self.commands_color_or_width:
+            self.erase()  # easy way to not have to update artist
+            self.create(event)
+
 # ------------------- recording or removing click data -----------------------
 
         elif event.key in (self.commands_misc['add point'],
                            self.commands_misc['remove point']):
             self.manage_click(event)
-
-# --------------------implement changes on graph -----------------------------
-
-        if event.key in self.commands_color_or_width:
-            self.erase()  # easy way to not have to update artist
-            self.create(event)
 
 # ------------------------ stop if necessary ---------------------------------
 
@@ -522,7 +521,7 @@ class Cursor(InteractiveObject):
             self.delete()
 
     def on_pick(self, event):
-        """Contrary to draggble objects, no self-picking here."""
+        """Contrary to draggable objects, no self-picking here."""
         pass
 
 

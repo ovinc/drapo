@@ -19,7 +19,6 @@ class Rect(InteractiveObject):
     ----------
     All parameters optional so that a rectangle can be created by `Rect()`.
 
-    - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - `position` (4-tuple (xmin, ymin, width, height) in data coordinates;
                   default None, i.e. rectangle automatically centered in axes).
@@ -43,11 +42,11 @@ class Rect(InteractiveObject):
 
     name = "Draggable Rectangle"
 
-    def __init__(self, fig=None, ax=None, position=None, pickersize=5, c=None,
+    def __init__(self, ax=None, position=None, pickersize=5, c=None,
                  color=None, ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
                  blit=True, block=False, timeout=0):
 
-        super().__init__(fig=fig, ax=ax, color=color, c=c,
+        super().__init__(ax=ax, color=color, c=c,
                          blit=blit, block=block)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()

@@ -19,7 +19,6 @@ class Line(InteractiveObject):
     ----------
     All parameters optional so that a line can simply be created by `Line()`.
 
-    - `fig` (matplotlib figure, default: current figure, specified as None).
     - `ax` (matplotlib axes, default: current axes, specified as None).
     - 'pickersize' (float, default: 5), tolerance for line picking.
     - `color` (matplotlib's color, default: None (class default value)).
@@ -45,11 +44,11 @@ class Line(InteractiveObject):
 
     name = 'Draggable Line'
 
-    def __init__(self, fig=None, ax=None, pickersize=5, color=None, c=None,
+    def __init__(self, ax=None, pickersize=5, color=None, c=None,
                  ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
                  avoid_existing=True, blit=True, block=False, timeout=0):
 
-        super().__init__(fig=fig, ax=ax, color=color, c=c,
+        super().__init__(ax=ax, color=color, c=c,
                          blit=blit, block=block)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
