@@ -59,7 +59,8 @@ class Rect(InteractiveObject):
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
 
-        self.fig.canvas.draw()  # Useful?
+        self.draw_canvas()
+        self.update_background()
 
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)

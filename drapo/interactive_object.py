@@ -63,6 +63,7 @@ class InteractiveObject:
         # artists, because e.g. when a line moves as a whole, only the line
         # is picked, but the two edge points need to be moving/active as well.
 
+        self.created = False  # True when artists defined, False when erased or not created
         self.moving = False  # faster way to check moving objects than to measure the length of moving_objects
         self.press_info = {'currently pressed': False}  # stores useful useful mouse click information
 
@@ -115,7 +116,7 @@ class InteractiveObject:
         # return f'{name} on Fig. {self.fig.number}.'
         return self.__repr__()
 
-# ================================== methods =================================
+# ============================ basic canvas methods ==========================
 
     def update_background(self):
         """Update background for blitting mode"""
@@ -132,17 +133,24 @@ class InteractiveObject:
         for artist in self.all_artists:
             self.ax.draw_artist(artist)
 
+    def draw_canvas(self):
+        """Draw canvas (expensive)"""
+        print(f'--- Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
+        self.fig.canvas.draw()
+
+    def blit_canvas(self):
+        """Blit objects above background, to update animated objects"""
+        self.fig.canvas.blit(self.ax.bbox)
+
+# ================================== methods =================================
+
     def update_graph(self, event):
         """Update graph with the moving artists. Called only by the leader."""
 
-        canvas = self.fig.canvas
-        ax = self.ax
-
         if InteractiveObject.blit and InteractiveObject.initiating_motion:
-            canvas.draw()
+            self.draw_canvas()
             self.update_background()
             InteractiveObject.initiating_motion = False
-            print('initiating')
 
         if InteractiveObject.blit:
             # without this line, the graph keeps all successive positions of
@@ -161,9 +169,9 @@ class InteractiveObject:
 
         # without this below, the graph is not updated
         if InteractiveObject.blit:
-            canvas.blit(ax.bbox)
+            self.blit_canvas()
         else:
-            canvas.draw()
+            self.draw_canvas()
 
     def initiate_motion(self, event):
         """Initiate motion and define leading artist that synchronizes plot.
@@ -181,7 +189,6 @@ class InteractiveObject:
             # This is because the canvas.draw() and/or canvas_copy_from_bbox()
             # calls need to be made with all moving artists declared as animated
             InteractiveObject.initiating_motion = True
-            self.fig.canvas.draw()
             print(f'{self} is leader')
         else:
             print(f'{self} is not leader')
@@ -225,9 +232,10 @@ class InteractiveObject:
         # Once all motion has stopped (i.e. no more moving objects that are not
         # a cursor -- by definition, cursor is always moving), redraw figure
         # and add the objects (now stopped) to the blitting background
+        # This allows us to call draw() only once even if several objects were
+        # moving
         if len(InteractiveObject.non_cursor_moving_objects()) == 0:
-            print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
-            self.fig.canvas.draw()
+            self.draw_canvas()
             if InteractiveObject.blit:
                 self.update_background()
 
@@ -235,6 +243,8 @@ class InteractiveObject:
         """Records information related to the mouse click, in px coordinates."""
 
         press_info = {'click': (event.x, event.y)}  # record click position
+        press_info['currently pressed'] = True
+
         moving_positions = {}
 
         for pt in self.all_pts:
@@ -245,41 +255,38 @@ class InteractiveObject:
         self.press_info = press_info
         self.moving_positions = moving_positions
 
-    def eraser(self, option):
-        """Private erasing function that is used by erase() and delete()"""
-
+    def erase(self):
+        """Lighter than delete(), keeps object connected and referenced"""
         for artist in self.all_artists:
             artist.remove()
         self.all_artists = []
 
-        if InteractiveObject.blit:
+        if self.name == 'Cursor' and InteractiveObject.blit:
+            # Cursor is always blitting so it suffices to restore background
+            # without re-drawing
             self.restore_background()
-            self.fig.canvas.blit(self.ax.bbox)
-        else:
-            self.fig.canvas.draw()
+            self.blit_canvas()
 
+        else:
+            self.draw_canvas()
+            if InteractiveObject.blit:
+                self.update_background()
+
+        # Below, check if Useful ???
         # Check if object is listed as still moving, and remove it.
         moving_objects = InteractiveObject.moving_objects
         if self in moving_objects:
             moving_objects.remove(self)
 
-        if option == 'erase':
-            pass
-        elif option == 'delete':
-            InteractiveObject.all_interactive_objects.remove(self)
-            self.disconnect()
-            if self.block:
-                self.fig.canvas.stop_event_loop()
-        else:
-            print('Warning: eraser function not called properly.')
-
-    def erase(self):
-        """Lighter than delete(), keeps object connected and referenced"""
-        self.eraser('erase')
+        self.created = False
 
     def delete(self):
         """Hard delete of object by removing its components and references"""
-        self.eraser('delete')
+        self.erase()
+        InteractiveObject.all_interactive_objects.remove(self)
+        self.disconnect()
+        if self.block:
+            self.fig.canvas.stop_event_loop()
 
     def delete_others(self, *args):
         """Delete other instances of the same class (eccluding parents/children)

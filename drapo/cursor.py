@@ -176,9 +176,9 @@ class Cursor(InteractiveObject):
         super().__init__(fig, color=color, c=c, blit=blit, block=block)
 
         # Cursor state attributes
-        self.press = False  # active when mouse is currently pressed
-        self.visible = True  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
-        self.inaxes = False  # True when mouse is in axes
+        self.press = False    # active when mouse is currently pressed
+        self.visible = True   # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
+        self.inaxes = False   # True when mouse is in axes
 
         # Appearance options
         self.style = linestyle
@@ -235,6 +235,8 @@ class Cursor(InteractiveObject):
 
     def create(self, event):
         """Draw a cursor (h+v lines) that stop at the edge of the axes."""
+        self.created = True
+
         ax = self.ax
         xmin, xmax = ax.get_xlim()
         ymin, ymax = ax.get_ylim()
@@ -269,11 +271,11 @@ class Cursor(InteractiveObject):
 
         # Below is for cursor to be visible upon creation
         if InteractiveObject.blit:
-            self.update_background()  # for first instantiation or after pan/zoom
-            self.draw_artists()
-            self.fig.canvas.blit(self.ax.bbox)
+            self.update_background()   # for first instantiation or after pan/zoom
+            self.draw_artists()        # for cursor to be immediately visible
+            self.blit_canvas()         # for renrering artists on background
         else:
-            self.fig.canvas.draw()
+            self.draw_canvas()
 
     def update_position(self, event):
         """Update position of the cursor to follow mouse event."""
@@ -294,58 +296,82 @@ class Cursor(InteractiveObject):
 
     def set_press_info(self, event):
         self.press_info = {'currently pressed': True,
-                           'click position': (event.xdata, event.ydata)}
+                           'motion type': None,
+                           'click position': (event.xdata, event.ydata),
+                           'xlim': self.ax.get_xlim(),
+                           'ylim': self.ax.get_ylim()}
+
+# ========== Manage drawing/recording of clicks (e.g. for ginput()) ==========
 
     def erase_marks(self):
         """Erase plotted clicks (marks) without removing click data"""
         for mark in self.marks:
             mark.remove()
-        # self.fig.canvas.draw()
 
     def erase_data(self):
         """Erase data of recorded clicks"""
         self.clickdata = []
 
-    def add_point(self, position):
-        """Add point to the click data (triggered by click or key press)"""
+    def _record_click(self, position):
+        """Record click data"""
+        self.clickdata.append(position)
+        self.clicknumber += 1
+
+    def _unrecord_click(self):
+        """Cancel click recording"""
+        if self.clicknumber == 0:
+            pass
+        else:
+            self.clicknumber -= 1
+            self.clickdata.pop(-1)  # remove last element
+
+    def _draw_click(self, position):
+        """Create click drawing"""
+        mark = Marker(self.ax, position, color=self.color,
+                      shape=self.markshape, size=self.marksize,
+                      style=self.markstyle)
+        self.marks.append(mark)
+
+    def _undraw_click(self):
+        """Cancel click drawing"""
+        if len(self.marks) == 0:
+            pass
+        else:
+            mark = self.marks.pop(-1)
+            mark.remove()
+
+    def manage_click(self, event):
+        """Manage what happens after a legit click (i.e. not for panning/zooming)"""
+        position = event.xdata, event.ydata
 
         if None in position:
             return  # click / key press was made with mouse outside of axes
 
-        if self.recordclicks:
-            self.clickdata.append(position)
-            self.clicknumber += 1
+        # Find if one needs to add or remove a point, and manage cases where
+        # the event can come from a mouse event or a key event ---------------
 
-        if self.markclicks:
-            mark = Marker(self.ax, position, color=self.color,
-                          shape=self.markshape, size=self.marksize,
-                          style=self.markstyle)
-            self.marks.append(mark)
-
-            self.fig.canvas.draw()
-            self.update_background()
-
-    def remove_point(self):
-        """Add point to the click data (triggered by click or key press)"""
+        try:
+            add = (event.button == self.clickbutton)
+            rem = (event.button == self.removebutton)
+        except AttributeError:
+            add = (event.key == self.commands_misc['add point'])
+            rem = (event.key == self.commands_misc['remove point'])
+        finally:
+            if not (add or rem):  # both are false, do nothing
+                return
 
         if self.recordclicks:
 
-            if self.clicknumber == 0:
-                pass
-            else:
-                self.clicknumber -= 1
-                self.clickdata.pop(-1)  # remove last element
+            self._record_click(position) if add else self._unrecord_click()
 
         if self.markclicks:
 
-            if len(self.marks) == 0:
-                pass
-            else:
-                mark = self.marks.pop(-1)
-                mark.remove()
+            self._draw_click(position) if add else self._undraw_click()
 
-            self.fig.canvas.draw()
-            self.update_background()
+            self.draw_canvas()             # redraw to add/remove click mark
+            if InteractiveObject.blit:
+                self.update_background()   # store this as new background for blitting
+                self.blit_canvas()         # this makes cursor reappear
 
 # ============================= callback methods =============================
 
@@ -370,51 +396,78 @@ class Cursor(InteractiveObject):
         are moving (and thus when a leader is already updating the graph),
         because this happens only when the mouse is currently pressed.
         """
-        if self.visible and self.inaxes and not self.press_info['currently pressed']:
+        # In case one missed the entry of mouse in axes (e.g. because Cursor
+        # instantiated while mouse was already in axes)
+        if not self.inaxes and event.inaxes:
+            self.inaxes = True
+
+        # If currently pressed, determine if it's pressed with other moving
+        # objects (dragging mode), or pressed with no other objects moving
+        # (i.e. panning/zooming or clicking for ginput with slight motion)
+        if self.press_info['currently pressed'] and self.press_info['motion type'] is None:
+            if len(InteractiveObject.non_cursor_moving_objects()) > 0:
+                self.press_info['motion type'] = 'multi'
+            else:
+                self.press_info['motion type'] = 'solo'
+
+        # If not currently pressed, check if creating a Cursor is needed and
+        # update cursor position during motion.
+        if not self.press_info['currently pressed'] and self.visible and self.inaxes:
+
+            # Below is to tackle the case where Cursor() is called when the mouse
+            # is already in axes
+            if not self.created:
+                self.create(event)
+
+            # Below is regular updating of graph to take into account cursor motion
             self.update_graph(event)
 
     def on_mouse_press(self, event):
-        """If mouse is pressed, deactivate cursor temporarily."""
+        """If mouse is pressed, deactivate cursor temporarily.
+
+        This is in order to accommodate potential zooming/panning.
+        """
         self.set_press_info(event)
         if self.visible and self.inaxes:
             self.erase()
 
     def on_mouse_release(self, event):
-        """When releasing click, reactivate cursor and redraw figure.
+        """When releasing click, reactivate cursor and redraw figure if necessary."""
 
-        This is in order to accommodate potential zooming/panning.
-        """
-        self.press_info['currently pressed'] = False
-        if self.visible and self.inaxes:
-            self.create(event)
+        # Detect if the release is due to panning/zooming --------------------
 
-        # See if click needs to be recorded / deleted / stopped --------------
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
 
-        position = (event.xdata, event.ydata)
+        if xlim == self.press_info['xlim'] and ylim == self.press_info['ylim']:
+            pan_zoom = False
+        else:
+            pan_zoom = True   # axes limits have changed, thus zoom/pan has occured
 
-        # line below avoids recording clicks during panning/zooming. It is
-        # read only when mouse release is at the same position as mouse press,
-        # i.e. when one has clicked to define a point and not to pan/zoom
-        if position == self.press_info['click position']:
-            if event.button == self.clickbutton:
-                self.add_point(position)
-            elif event.button == self.removebutton:
-                self.remove_point()
+        print(f'Pan/Zoom: {pan_zoom}')
+
+        # Update dictionary used to store press/motion info ------------------
+
+        self.press_info = {'currently pressed': False}
+
+        # See if click needs to be recorded / deleted  (in case of a legit
+        # click) or if background needs to be updated (in case of pan/zoom)
+
+        if not pan_zoom:
+            self.manage_click(event)
+        else:
+            if InteractiveObject.blit:
+                self.blit_canvas()  # I don't know why it does not work if I
+                # don't put this here ...
+
+        # See if cursor needs to re-appear or be deleted etc. ----------------
 
         if self.clicknumber == self.n or event.button == self.stopbutton:
             print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
-        # CHECK IF USEFUL AND IF INTERACTS WITH RESET_AFTER_MOTION !!
-        if InteractiveObject.blit and len(InteractiveObject.non_cursor_moving_objects()) == 0:
-            print(f'Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
-            self.fig.canvas.draw()
-            self.update_background()
-            self.draw_artists()
-
-        # SEE IF USEFUL
-        if InteractiveObject.blit:
-            self.fig.canvas.blit(self.ax.bbox)
+        elif self.visible and self.inaxes:
+            self.create(event)
 
     def on_key_press(self, event):
         """Key press controls. Space bar toggles cursor visibility.
@@ -452,13 +505,9 @@ class Cursor(InteractiveObject):
 
 # ------------------- recording or removing click data -----------------------
 
-        elif event.key == self.commands_misc['add point']:
-            self.add_point((event.xdata, event.ydata))
-
-        # I use 'z' here because backspace (as used in ginput) interferes
-        # with the interactive "back" option in matplotlib
-        elif event.key == self.commands_misc['remove point']:
-            self.remove_point()
+        elif event.key in (self.commands_misc['add point'],
+                           self.commands_misc['remove point']):
+            self.manage_click(event)
 
 # --------------------implement changes on graph -----------------------------
 
