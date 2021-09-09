@@ -140,8 +140,8 @@ By default, color is red, linestyle is dotted (:), linewidth is 1.
 
 Cursor appearance can also be changed by specific key strokes:
 - space bar to toggle visibility (on/off)
-- shift + up/down arrows: increase or decrease width (linewidth)
-- shift + left/right arrows: cycle through different cursor colors
+- Alt + up/down arrows: increase or decrease width (linewidth)
+- Alt + left/right arrows: cycle through different cursor colors
 
 The cursor can also leave marks and/or record click positions if there is
 a click with a specific button (by default, left mouse button). Clicks can

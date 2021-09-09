@@ -134,7 +134,6 @@ class InteractiveObject:
 
     def draw_canvas(self):
         """Draw canvas (expensive)"""
-        print(f'--- Redrawn by {self}, moving objects: {InteractiveObject.moving_objects}')
         self.fig.canvas.draw()
 
     def blit_canvas(self):
@@ -188,9 +187,6 @@ class InteractiveObject:
             # This is because the canvas.draw() and/or canvas_copy_from_bbox()
             # calls need to be made with all moving artists declared as animated
             InteractiveObject.initiating_motion = True
-            print(f'{self} is leader')
-        else:
-            print(f'{self} is not leader')
 
         InteractiveObject.moving_objects.add(self)
         self.moving = True

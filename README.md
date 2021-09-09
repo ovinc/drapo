@@ -61,8 +61,8 @@ See ClickFig below to activate axes interactively to be able to create the objec
 ## Moving cursor
 
 `Cursor()` creates a cursor in the current figure, but contrary to the draggable objects, the cursor is not bound to specific axes. It is however bound to a figure, and will appear on whatever axes the mouse is currently on; it will switch axes if the mouse goes over other axes. No cursor is visible if the mouse is not currently on axes.
-- Use <kbd>⇧ Shift</kbd> + left/right arrow keys to change color.
-- Use <kbd>⇧ Shift</kbd> + up/down keys to change thickness.
+- Use <kbd>Alt</kbd> + left/right arrow keys to change color.
+- Use <kbd>Alt</kbd> + up/down keys to change thickness.
 - Use the <kbd>space</kbd> bar to toggle visibility on/off.
 
 ## Graphical input functions
@@ -119,7 +119,7 @@ The *MacOSX* backend of Matplotlib seems to cause problems where the figure cras
 - importlib-metadata
 - numpy (optional, only needed to run demos and examples)
 
-**Note**: a bug in drapo < 1.0.5 makes it very difficult to select objects when using Matplotlib <3.3. This has been corrected in drapo <= 1.0.5.
+**Note**: a bug in drapo < 1.0.5 makes it very difficult to select objects when using Matplotlib <3.3. This has been corrected in drapo >= 1.0.5.
 
 ## Python
 

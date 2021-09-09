@@ -2,15 +2,13 @@
 
 All drapo classes except ClickFig (not described here) use a **base class** named **InteractiveObject** located in the file *interactive_object.py*. The base class is mainly developed for objects that are set in motion when they are selected (picked) by a click, and moved by dragging the object while keeping the mouse pressed, like the **Line** and **Rect** classes. These classes, as a result, use most of the base class methods with little modification. The **Cursor** class has a behavior slightly different where the object moves spontaneously with the mouse without a click. As a result, it has to redefine more of the base class methods. The base class allows for all those objects to be managed in the same framework and thus enables dragging of several objects (possibly of different types) at the same time, and efficient rendering of the motion of these objects through a globally set blitting mode.
 
-important to keep
 
 ## General structure
-
 - Events on a Matplotlib figure (click, mouse motion, key press, enter axes, etc.) are tied to *callback functions* through Matplotlib's event handling manager (see https://matplotlib.org/users/event_handling.html). The base class manages these events with the `connect()` and `disconnect()` methods.
 
 - Callback functions (`on_mouse_press`, `on_motion`, etc.) can be redefined in subclasses if necessary. In the base class, they are optimized for click-enabled draggable objects like Line and Rect. These callback functions call methods that are either base class methods or specific class methods (see below). For example, motion of draggable objects is triggered by a picking event (callback `on_pick`) and is then managed by the callback function `on_motion`. **Cursor** redefines the adequate methods to fit its different behavior.
 
-- During motion, blitting is used for fast rendering. The principle is to save non-moving objects as a background pixel image and just re-draw moving objects on it. If blitting is deactivated with the `blit = False` option, all contents on the figure is re-drawn at every step, which is much slower and results in lag. The `cls.blit` bool attribute is managed by the base class and common to all subclasses, so that the last instance of any class defines whether blitting is used or not for all objects present.
+- During motion, blitting is used for fast rendering. The principle is to save non-moving objects as a background pixel image and just re-draw moving objects on it. If blitting is deactivated with the `blit=False` option, all contents on the figure is re-drawn at every step, which is much slower and results in lag. The `cls.blit` bool attribute is managed by the base class and common to all subclasses, so that the last instance of any class defines whether blitting is used or not for all objects present.
 
 - Because several objects can be moving at the same time (e.g. two lines dragged by the same click), display and blitting can be tricky and buggy. To solve this problem, one of the moving objects is defined as the leader. The leader object is stored in the `cls.leader` attribute of the base class, which is thus common to all subclasses. Only the leader calls graph update events, during which all other moving objects (stored in another class attribute `cls.moving_objects`) are updated at the same time.
 
@@ -139,7 +137,7 @@ Specific things to test for rectangles:
 ### Cursor
 
 - Check that the cursor is automatically created when mouse enters any of the subplots.
-- While cursor is on, press shift+up/down/left/right to change thickness and color. Changes should be immediately effective and appear without any other action needed.
+- While cursor is on, press Alt+(up/down/left/right) to change thickness and color. Changes should be immediately effective and appear without any other action needed.
 - Press space to deactivate/reactivate cursor. Deactivate it outside of the figure as well and check that it does not appear when the mouse comes back in the axes.
 - Check interaction with Line and Rect instances.
 

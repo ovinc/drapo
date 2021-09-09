@@ -445,8 +445,6 @@ class Cursor(InteractiveObject):
         else:
             pan_zoom = True   # axes limits have changed, thus zoom/pan has occured
 
-        print(f'Pan/Zoom: {pan_zoom}')
-
         # Update dictionary used to store press/motion info ------------------
 
         self.press_info = {'currently pressed': False}
