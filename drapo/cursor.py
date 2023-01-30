@@ -47,10 +47,16 @@ class Marker:
 
     def draw(self):
         """Create marker"""
+        xmin, xmax = self.ax.get_xlim()
+        ymin, ymax = self.ax.get_ylim()
+
         if self.shape in ('hline', 'vline', 'crosshair'):
             self._draw_lines()
         else:
             self._draw_marker()
+
+        self.ax.set_xlim(xmin, xmax)   # prevents auto redefining axes limits
+        self.ax.set_ylim(ymin, ymax)   # when drawing marker
 
     def _draw_lines(self):
         """Draw one or more infinite lines"""
@@ -106,6 +112,7 @@ class Cursor(InteractiveObject):
     - `blit` (bool, default: True). Blitting for performance.
     - `show_clicks` (bool, default:False). Mark location of clicks.
     - `record_clicks` (bool, default False). Create a list of click positions.
+    - `visible` (bool, default True). If false, cursor initially not visible.
 
     The 3 following parameters can be 1, 2, 3 (left, middle, right mouse btns).
     - `mouse_add` (int, default 1). Adds a (x, y) point by clicking.
@@ -168,17 +175,19 @@ class Cursor(InteractiveObject):
 
     def __init__(self, ax=None, color=None, c=None, linestyle=':', linewidth=1,
                  horizontal=True, vertical=True,
-                 blit=True, show_clicks=False, record_clicks=False,
+                 blit=True, visible=True,
+                 show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
                  n=1000, block=False, timeout=0,
-                 marker='+', marker_size=None, marker_style='-'):
-        """Note: cursor drawn only when the mouse enters axes."""
+                 marker='+', marker_size=None, marker_style='-',
+                 ):
+        """Note: cursor drawn only when mouse enters axes."""
 
         super().__init__(ax=ax, color=color, c=c, blit=blit, block=block)
 
         # Cursor state attributes
         self.press = False    # active when mouse is currently pressed
-        self.visible = True   # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
+        self.visible = visible  # can be True even if cursor not drawn (e.g. because mouse is outside of axes)
         self.inaxes = False   # True when mouse is in axes
 
         # Appearance options
@@ -364,6 +373,7 @@ class Cursor(InteractiveObject):
         if self.recordclicks:
 
             self._record_click(position) if add else self._unrecord_click()
+            print('click recorded')
 
         if self.markclicks:
 
@@ -440,10 +450,17 @@ class Cursor(InteractiveObject):
         xlim = self.ax.get_xlim()
         ylim = self.ax.get_ylim()
 
-        if xlim == self.press_info['xlim'] and ylim == self.press_info['ylim']:
+        # The try/except block solves a bug when cursor is instanciated when
+        # mouse is already in axes and 'xlim' is not defined in press_info
+        # (I'm not sure I completely understand why it happens)
+        try:
+            xlim_saved = self.press_info['xlim']
+            ylim_saved = self.press_info['ylim']
+        except KeyError:
             pan_zoom = False
         else:
-            pan_zoom = True   # axes limits have changed, thus zoom/pan has occured
+            # if axes limits have changed, zoom/pan must have occured
+            pan_zoom = False if (xlim == xlim_saved and ylim == ylim_saved) else True
 
         # Update dictionary used to store press/motion info ------------------
 
@@ -531,7 +548,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
            color=None, c=None, linestyle=':', linewidth=1,
            horizontal=True, vertical=True,
            marker='+', marker_size=None, marker_style='-',
-           blit=True):
+           cursor=True, blit=True, ax=None):
     """Improved ginput function (graphical data input) compared to Matplotlib's.
 
     In particular, a cursor helps for precise clicking and zooming/panning
@@ -554,7 +571,9 @@ def ginput(n=1, timeout=0, show_clicks=True,
     - horizontal (default True)
     - vertical (default True)
     - marker / marker_size / marker_style (click marker appearance)
-    - blit (bool, default True)
+    - cursor (if False, do not show cursor initially; default True)
+    - blit (bool, default True: use blitting for faster rendering)
+    - ax (default None, i.e. last active axes)
 
     Returns
     -------
@@ -565,7 +584,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
                horizontal=horizontal, vertical=vertical, timeout=timeout,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
                marker=marker, marker_size=marker_size, marker_style=marker_style,
-               blit=blit)
+               blit=blit, visible=cursor, ax=ax)
     data = c.clickdata
     time.sleep(0.2)  # just to have time to see the last click and its mark
     c.erase_marks()

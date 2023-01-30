@@ -125,7 +125,7 @@ Other
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(self, fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000, block=False, timeout=0, marker='+', marker_size=None, marker_style='-')
+Cursor(self, fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, visible=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000, block=False, timeout=0, marker='+', marker_size=None, marker_style='-')
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -169,6 +169,7 @@ without any other specification.
 - `blit` (bool, default: True). Blitting for performance.
 - `show_clicks` (bool, default:False). Mark location of clicks.
 - `record_clicks` (bool, default False). Create a list of click positions.
+- `visible` (bool, default True). If false, cursor initially not visible.
 
 The 3 following parameters can be 1, 2, 3 (left, middle, right mouse btns).
 - `mouse_add` (int, default 1). Adds a (x, y) point by clicking.
@@ -239,7 +240,7 @@ zooming if blitting is activated, but one needs to move the mouse.
 Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data.
 
 ```python
-data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, marker='+', marker_size=None, marker_style='-', blit=True):
+data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, marker='+', marker_size=None, marker_style='-', cursor=True, blit=True, ax=None):
 ```
 
 Key shortcuts and mouse clicks follow the Cursor class behavior, in particular the key shortcuts are `a`, `z`, `enter` (instead of *any key*, *backspace* and *enter*). See Cursor class documentation for more info. All Cursor class interactive features are usable.
@@ -255,7 +256,9 @@ with the following additional parameters (see drapo.Cursor):
 - horizontal (default True)
 - vertical (default True)
 - marker / marker_size / marker_style (click marker appearance)
-- blit (bool, default True)
+- cursor (if False, do not show cursor initially; default True)
+- blit (bool, default True: use blitting for faster rendering)
+- ax (default None, i.e. last active axes)
 
 ### Returns
 List of tuples corresponding to the list of clicked (x, y) coordinates.

@@ -56,7 +56,7 @@ class Line(InteractiveObject):
         self.create(pickersize, self.color, ptstyle, ptsize,
                     linestyle, linewidth, avoid_existing)
 
-        # to prevent any shift in axes limits when instanciating line. The
+        # to prevent any shift in axes limits when instanciating line.
         self.ax.set_xlim(xlim)
         self.ax.set_ylim(ylim)
 
