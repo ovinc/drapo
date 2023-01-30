@@ -119,12 +119,7 @@ class Cursor(InteractiveObject):
     - `mouse_pop` (int, default 3). Removes most recently added point.
     - `mouse_stop`(int, default 2). Stops click recording. Same as reaching n.
 
-    The 3 following parameters are useful for ginput-like functions.
-    - `n` (int, default 1000). Cursor deactivates after n clicks.
-    - `block` (bool, default False). Block console until nclicks is reached.
-    - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
-
-    The last 3 parameters customize appearance of click marks when shown.
+    The 3 following parameters customize appearance of click marks when shown.
     - `marker` (matplolib's symbol, default: '+')
     - `marker_size` (matplotlib's markersize, default: None, see below)
     - `marker_style` (matplotlib linestyle, if applicable)
@@ -134,6 +129,13 @@ class Cursor(InteractiveObject):
     (both vertical and horizontal lines spanning axes). In these last 3
     situations, `marker_size` refers to linewidth, and `marker_style` to the
     linestyle; `marker_style` does not apply to regular matplotlib markers.
+
+    These last parameters are useful for ginput-like functions.
+    - `n` (int, default 1000). Cursor deactivates after n clicks.
+    - `block` (bool, default False). Block console until nclicks is reached.
+    - `verbose` (bool, default False). If True, some events associated with
+                interactive objects are printed in the console.
+    - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
     Useful class methods
     --------------------
@@ -173,17 +175,23 @@ class Cursor(InteractiveObject):
 
     commands_all = commands_color_or_width + list(commands_misc.values())
 
-    def __init__(self, ax=None, color=None, c=None, linestyle=':', linewidth=1,
+    def __init__(self, ax=None, color=None, c=None,
+                 linestyle=':', linewidth=1,
                  horizontal=True, vertical=True,
                  blit=True, visible=True,
                  show_clicks=False, record_clicks=False,
                  mouse_add=1, mouse_pop=3, mouse_stop=2,
-                 n=1000, block=False, timeout=0,
                  marker='+', marker_size=None, marker_style='-',
+                 n=1000, block=False, verbose=False, timeout=0,
                  ):
         """Note: cursor drawn only when mouse enters axes."""
 
-        super().__init__(ax=ax, color=color, c=c, blit=blit, block=block)
+        super().__init__(ax=ax,
+                         color=color,
+                         c=c,
+                         blit=blit,
+                         block=block,
+                         verbose=verbose)
 
         # Cursor state attributes
         self.press = False    # active when mouse is currently pressed
@@ -373,7 +381,8 @@ class Cursor(InteractiveObject):
         if self.recordclicks:
 
             self._record_click(position) if add else self._unrecord_click()
-            print('click recorded')
+            if self.verbose:
+                print('click recorded')
 
         if self.markclicks:
 
@@ -479,7 +488,8 @@ class Cursor(InteractiveObject):
         # See if cursor needs to re-appear or be deleted etc. ----------------
 
         if self.clicknumber == self.n or event.button == self.stopbutton:
-            print('Cursor disconnected (max number of clicks, or stop button pressed).')
+            if self.verbose:
+                print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
         elif self.visible and self.inaxes:
@@ -532,7 +542,8 @@ class Cursor(InteractiveObject):
 # ------------------------ stop if necessary ---------------------------------
 
         if self.clicknumber == self.n or event.key == self.commands_misc['stop']:
-            print('Cursor disconnected (max number of clicks, or stop button pressed).')
+            if self.verbose:
+                print('Cursor disconnected (max number of clicks, or stop button pressed).')
             self.delete()
 
     def on_pick(self, event):
@@ -548,7 +559,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
            color=None, c=None, linestyle=':', linewidth=1,
            horizontal=True, vertical=True,
            marker='+', marker_size=None, marker_style='-',
-           cursor=True, blit=True, ax=None):
+           cursor=True, blit=True, ax=None, verbose=False):
     """Improved ginput function (graphical data input) compared to Matplotlib's.
 
     In particular, a cursor helps for precise clicking and zooming/panning
@@ -565,15 +576,17 @@ def ginput(n=1, timeout=0, show_clicks=True,
     https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
     with the following additional parameters (see drapo.Cursor):
 
-    - color / c (default None, i.e. auto)
-    - linestyle (default ':')
-    - linewidth (default 1)
-    - horizontal (default True)
-    - vertical (default True)
-    - marker / marker_size / marker_style (click marker appearance)
-    - cursor (if False, do not show cursor initially; default True)
-    - blit (bool, default True: use blitting for faster rendering)
-    - ax (default None, i.e. last active axes)
+    - `color` / c (default None, i.e. auto)
+    - `linestyle` (default ':')
+    - `linewidth` (default 1)
+    - `horizontal` (default True)
+    - `vertical` (default True)
+    - `marker` / `marker_size` / `marker_style` (click marker appearance)
+    - `cursor` (if False, do not show cursor initially; default True)
+    - `blit` (bool, default True: use blitting for faster rendering)
+    - `ax` (default None, i.e. last active axes)
+    - `verbose` (bool, default False). If True, some events associated with
+                interactive objects are printed in the console.
 
     Returns
     -------
@@ -584,7 +597,7 @@ def ginput(n=1, timeout=0, show_clicks=True,
                horizontal=horizontal, vertical=vertical, timeout=timeout,
                mouse_add=mouse_add, mouse_stop=mouse_stop, mouse_pop=mouse_pop,
                marker=marker, marker_size=marker_size, marker_style=marker_style,
-               blit=blit, visible=cursor, ax=ax)
+               blit=blit, visible=cursor, ax=ax, verbose=verbose)
     data = c.clickdata
     time.sleep(0.2)  # just to have time to see the last click and its mark
     c.erase_marks()

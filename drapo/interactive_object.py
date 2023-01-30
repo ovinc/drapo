@@ -48,7 +48,8 @@ class InteractiveObject:
                  color=None,
                  c=None,
                  blit=True,
-                 block=False):
+                 block=False,
+                 verbose=False):
 
         self.ax = plt.gca() if ax is None else ax
         self.fig = self.ax.figure
@@ -78,6 +79,10 @@ class InteractiveObject:
 
         # defines whether the interactive object is blocking the console or not
         self.block = block
+
+        # If verbose is True, various indications are printed in the console
+        # when interacting with objects (e.g. 'Cursor deleted', etc.)
+        self.verbose = verbose
 
         # color management ---------------------------------------------------
 

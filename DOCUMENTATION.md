@@ -15,7 +15,7 @@
 Interactive draggable line in matplotlib figure/axes.
 
 ```python
-Line(fig=None, ax=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True, blit=True, block=False)
+Line(fig=None, ax=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, avoid_existing=True, blit=True, block=False, verbose=False)
 ```
 
 The line is composed of three elements : two points at the edge (pt1, pt2)
@@ -54,6 +54,8 @@ Instantiation option:
 Other
 - `blit` (bool, default True). If True, blitting is used for fast rendering
 - `block`(bool, default False). If True, object blocks the console (block not implemented yet for Line and Rect).
+- `verbose` (bool, default False). If True, some events associated with
+            interactive objects are printed in the console.
 
 ### Notes
 
@@ -82,7 +84,7 @@ and instantiate another line.
 Interactive draggable rectangle in matplotlib figure/axes.
 
 ```python
-Rect(self, fig=None, ax=None, position=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False, timeout=0):
+Rect(self, fig=None, ax=None, position=None, pickersize=5, color=None, c=None, ptstyle='.', ptsize=5, linestyle='-', linewidth=1, blit=True, block=False, verbose=False, timeout=0):
 ```
 
 Left click to drag rectangle, right click or enter to remove it. Clicking can be done on the edges, vertices (corners), or on the center. These clicks trigger different modes of motion.
@@ -109,6 +111,8 @@ Appearance of the edges (lines):
 Other
 - `blit` (bool, default True). If True, blitting is used for fast rendering
 - `block`(bool, default False). If True, object blocks the console (block not implemented yet for Line and Rect).
+- `verbose` (bool, default False). If True, some events associated with
+            interactive objects are printed in the console.
 - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
 
@@ -125,7 +129,7 @@ Other
 Cursor following the mouse on any axes of a single figure.
 
 ``` python
-Cursor(self, fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, visible=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, n=1000, block=False, timeout=0, marker='+', marker_size=None, marker_style='-')
+Cursor(self, fig=None, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, blit=True, visible=True, show_clicks=False, record_clicks=False, mouse_add=1, mouse_pop=3, mouse_stop=2, marker='+', marker_size=None, marker_style='-', n=1000, block=False, timeout=0, verbose=False)
 ```
 
 This class creates a cursor that moves along with the mouse. It is drawn
@@ -176,12 +180,7 @@ The 3 following parameters can be 1, 2, 3 (left, middle, right mouse btns).
 - `mouse_pop` (int, default 3). Removes most recently added point.
 - `mouse_stop`(int, default 2). Stops click recording. Same as reaching n.
 
-The 3 following parameters are useful for ginput-like functions.
-- `n` (int, default 1000). Cursor deactivates after n clicks.
-- `block` (bool, default False). Block console until nclicks is reached.
-- `timeout` (float, default 0, i.e. infinite) timeout for blocking.
-
-The last 3 parameters customize appearance of click marks when shown.
+The 3 following parameters customize appearance of click marks when shown.
 - `marker` (matplolib's symbol, default: '+')
 - `marker_size` (matplotlib's markersize, default: None, see below)
 - `marker_style` (matplotlib linestyle, if applicable)
@@ -192,6 +191,12 @@ The last 3 parameters customize appearance of click marks when shown.
 situations, `marker_size` refers to linewidth, and `marker_style` to the
 linestyle; `marker_style` does not apply to regular matplotlib markers.
 
+These last parameters are useful for ginput-like functions.
+- `n` (int, default 1000). Cursor deactivates after n clicks.
+- `block` (bool, default False). Block console until nclicks is reached.
+- `verbose` (bool, default False). If True, some events associated with
+            interactive objects are printed in the console.
+- `timeout` (float, default 0, i.e. infinite) timeout for blocking.
 
 ### Useful class methods
 
@@ -240,7 +245,7 @@ zooming if blitting is activated, but one needs to move the mouse.
 Improved ginput function (graphical data input) compared to Matplotlib's. In particular, a cursor helps for precise clicking and zooming/panning do not add extra click data.
 
 ```python
-data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, marker='+', marker_size=None, marker_style='-', cursor=True, blit=True, ax=None):
+data = ginput(n=1, timeout=0, show_clicks=True, mouse_add=1, mouse_pop=3, mouse_stop=2, color=None, c=None, linestyle=':', linewidth=1, horizontal=True, vertical=True, marker='+', marker_size=None, marker_style='-', cursor=True, blit=True, ax=None, verbose=False):
 ```
 
 Key shortcuts and mouse clicks follow the Cursor class behavior, in particular the key shortcuts are `a`, `z`, `enter` (instead of *any key*, *backspace* and *enter*). See Cursor class documentation for more info. All Cursor class interactive features are usable.
@@ -250,15 +255,17 @@ Parameters are exactly the same as matplotlib.pyplot.ginput, see
 https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.ginput.html
 with the following additional parameters (see drapo.Cursor):
 
-- color / c (default None, i.e. auto)
-- linestyle (default ':')
-- linewidth (default 1)
-- horizontal (default True)
-- vertical (default True)
-- marker / marker_size / marker_style (click marker appearance)
-- cursor (if False, do not show cursor initially; default True)
-- blit (bool, default True: use blitting for faster rendering)
-- ax (default None, i.e. last active axes)
+- `color` / c (default None, i.e. auto)
+- `linestyle` (default ':')
+- `linewidth` (default 1)
+- `horizontal` (default True)
+- `vertical` (default True)
+- `marker` / `marker_size` / `marker_style` (click marker appearance)
+- `cursor` (if False, do not show cursor initially; default True)
+- `blit` (bool, default True: use blitting for faster rendering)
+- `ax` (default None, i.e. last active axes)
+- `verbose` (bool, default False). If True, some events associated with
+            interactive objects are printed in the console.
 
 ### Returns
 List of tuples corresponding to the list of clicked (x, y) coordinates.

@@ -39,6 +39,8 @@ class Line(InteractiveObject):
     Other
     - `blit` (bool, default True). If True, blitting is used for fast rendering
     - `block`(bool, default False). If True, object blocks the console
+    - `verbose` (bool, default False). If True, some events associated with
+                interactive objects are printed in the console.
     - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
     """
 
@@ -46,10 +48,11 @@ class Line(InteractiveObject):
 
     def __init__(self, ax=None, pickersize=5, color=None, c=None,
                  ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
-                 avoid_existing=True, blit=True, block=False, timeout=0):
+                 avoid_existing=True, blit=True,
+                 block=False, verbose=False, timeout=0):
 
         super().__init__(ax=ax, color=color, c=c,
-                         blit=blit, block=block)
+                         blit=blit, block=block, verbose=verbose)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
@@ -223,7 +226,8 @@ class Line(InteractiveObject):
 
     def on_key_press(self, event):
         if event.key == 'enter':
-            print('Line position recorded. Line deleted.')
+            if self.verbose:
+                print('Line position recorded. Line deleted.')
             self.recorded_position = self.get_position()
             self.delete()
 

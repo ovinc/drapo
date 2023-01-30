@@ -37,6 +37,8 @@ class Rect(InteractiveObject):
     Other
     - `blit` (bool, default True). If True, blitting is used for fast rendering
     - `block`(bool, default False). If True, object blocks the console
+    - `verbose` (bool, default False). If True, some events associated with
+                interactive objects are printed in the console.
     - `timeout` (float, default 0, i.e. infinite) timeout for blocking.
     """
 
@@ -44,10 +46,10 @@ class Rect(InteractiveObject):
 
     def __init__(self, ax=None, position=None, pickersize=5, c=None,
                  color=None, ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
-                 blit=True, block=False, timeout=0):
+                 blit=True, block=False, verbose=False, timeout=0):
 
         super().__init__(ax=ax, color=color, c=c,
-                         blit=blit, block=block)
+                         blit=blit, block=block, verbose=verbose)
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
@@ -357,7 +359,8 @@ class Rect(InteractiveObject):
 
     def on_key_press(self, event):
         if event.key == 'enter':
-            print('Rectangle position recorded. Rectangle deleted.')
+            if self.verbose:
+                print('Rectangle position recorded. Rectangle deleted.')
             self.recorded_position = self.get_position()
             self.delete()
 

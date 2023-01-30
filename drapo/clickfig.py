@@ -47,6 +47,8 @@ class ClickFig:
     ----------
     - n (int, default 1): maximum number of clicks allowed.
     - highlight (bool, default True): change ax/fig color when mouse on them.
+    - `verbose` (bool, default False). If True, some events associated with
+                interactive objects are printed in the console.
     """
 
     fig_selectcolor = '#F3F8FA'
@@ -54,12 +56,13 @@ class ClickFig:
 
     clickfigs = []  # tracks all instances of ClickFig
 
-    def __init__(self, n=1, highlight=True):
+    def __init__(self, n=1, highlight=True, verbose=False):
 
         self.figs = ClickFig.list_figures()
 
         self.n = n
         self.highlight = highlight
+        self.verbose = verbose
 
         if len(self.figs) > 0:
 
@@ -144,10 +147,12 @@ class ClickFig:
 
             # activate clicked axes as the current axes.
             if ax is None:
-                print('\nActive Figure defined, no Axes on click location.')
+                if self.verbose:
+                    print('\nActive Figure defined, no Axes on click location.')
             else:
                 plt.sca(ax)
-                print('\nActive Figure and Axes defined.')
+                if self.verbose:
+                    print('\nActive Figure and Axes defined.')
 
         # right click or reached max click number: deactivate interactive mouse
         if event.button == 3 or self.clicknumber == self.n:
@@ -162,9 +167,11 @@ class ClickFig:
                 fig.canvas.draw()
 
             if event.button == 3:
-                print('\nClickFig deactivated (left click).')
+                if self.verbose:
+                    print('\nClickFig deactivated (left click).')
             else:
-                print('\nClickFig deactivated (max number of clicks reached).')
+                if self.verbose:
+                    print('\nClickFig deactivated (max number of clicks reached).')
 
             self.erase()
 
