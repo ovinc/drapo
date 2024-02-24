@@ -438,11 +438,19 @@ class InteractiveObject:
     def on_pick(self, event):
         """If picked, save picked objects, or delete objects if right click"""
         selected = event.artist
-        if event.mouseevent.button == 3 and (selected in self.all_artists):
-            self.delete()
+
+        if selected not in self.all_artists:
             return
-        if selected in self.all_artists:
-            self.picked_artists.add(selected)
+
+        if event.mouseevent.button == 3:  # right click
+            self._on_right_pick()
+            return
+
+        self.picked_artists.add(selected)
+
+    def _on_right_pick(self):
+        """"What to do when picked with right click"""
+        self.delete()
 
     def on_mouse_press(self, event):
         """When mouse button is pressed, initiate motion."""
