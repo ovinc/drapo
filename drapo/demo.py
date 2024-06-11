@@ -67,8 +67,10 @@ if __name__ == '__main__':
 
     descr = "Run demo for drapo, with backend and blitting options."
 
-    parser = argparse.ArgumentParser(description=descr,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=descr,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
 
     msg = "(str): Matplotlib backend (e.g. 'TkAgg', 'Qt5Agg', 'MacOSX', etc.)"
     parser.add_argument('-B', '--backend', type=str, help=msg)

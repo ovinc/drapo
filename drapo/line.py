@@ -46,18 +46,43 @@ class Line(InteractiveObject):
 
     name = 'Draggable Line'
 
-    def __init__(self, ax=None, pickersize=5, color=None, c=None,
-                 ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
-                 avoid_existing=True, blit=True,
-                 block=False, verbose=False, timeout=0):
+    def __init__(
+        self,
+        ax=None,
+        pickersize=5,
+        color=None,
+        c=None,
+        ptstyle='.',
+        ptsize=8,
+        linestyle='-',
+        linewidth=1,
+        avoid_existing=True,
+        blit=True,
+        block=False,
+        verbose=False,
+        timeout=0,
+    ):
 
-        super().__init__(ax=ax, color=color, c=c,
-                         blit=blit, block=block, verbose=verbose)
+        super().__init__(
+            ax=ax,
+            color=color,
+            c=c,
+            blit=blit,
+            block=block,
+            verbose=verbose,
+        )
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
-        self.create(pickersize, self.color, ptstyle, ptsize,
-                    linestyle, linewidth, avoid_existing)
+        self.create(
+            pickersize,
+            self.color,
+            ptstyle,
+            ptsize,
+            linestyle,
+            linewidth,
+            avoid_existing,
+        )
 
         # to prevent any shift in axes limits when instanciating line.
         self.ax.set_xlim(xlim)
@@ -205,7 +230,7 @@ class Line(InteractiveObject):
         # now apply the changes to the graph
         for pt in active_pts:
             xnew, ynew = self.pxtodata(self.moving_positions[pt])
-            pt.set_data(xnew, ynew)
+            pt.set_data([xnew], [ynew])
 
         pt1, pt2, link = self.all_artists
         x1, y1 = self.pxtodata(self.moving_positions[pt1])

@@ -303,11 +303,11 @@ class Cursor(InteractiveObject):
 
         if self.horizontal:
             hline = self.cursor_lines['horizontal']
-            hline.set_ydata(y)
+            hline.set_ydata([y])
 
         if self.vertical:
             vline = self.cursor_lines['vertical']
-            vline.set_xdata(x)
+            vline.set_xdata([x])
 
     def reset_after_motion(self):
         pass

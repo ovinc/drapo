@@ -44,17 +44,42 @@ class Rect(InteractiveObject):
 
     name = "Draggable Rectangle"
 
-    def __init__(self, ax=None, position=None, pickersize=5, c=None,
-                 color=None, ptstyle='.', ptsize=8, linestyle='-', linewidth=1,
-                 blit=True, block=False, verbose=False, timeout=0):
+    def __init__(
+        self,
+        ax=None,
+        position=None,
+        pickersize=5,
+        c=None,
+        color=None,
+        ptstyle='.',
+        ptsize=8,
+        linestyle='-',
+        linewidth=1,
+        blit=True,
+        block=False,
+        verbose=False,
+        timeout=0,
+    ):
 
-        super().__init__(ax=ax, color=color, c=c,
-                         blit=blit, block=block, verbose=verbose)
+        super().__init__(
+            ax=ax,
+            color=color,
+            c=c,
+            blit=blit,
+            block=block,
+            verbose=verbose,
+        )
 
         xlim, ylim = self.ax.get_xlim(), self.ax.get_ylim()
 
-        self.create(pickersize, position,
-                    ptstyle, ptsize, linestyle, linewidth)
+        self.create(
+            pickersize,
+            position,
+            ptstyle,
+            ptsize,
+            linestyle,
+            linewidth,
+        )
 
         # to prevent any shift in axes limits when instanciating line. The
         self.ax.set_xlim(xlim)
@@ -66,22 +91,38 @@ class Rect(InteractiveObject):
         if self.block:
             self.fig.canvas.start_event_loop(timeout=timeout)
 
-    def create(self, pickersize, position,
-               ptstyle, ptsize, linestyle, linewidth):
+    def create(
+        self,
+        pickersize,
+        position,
+        ptstyle,
+        ptsize,
+        linestyle,
+        linewidth,
+    ):
 
         positions = self.set_initial_position(position)
         corner_positions = positions[:-1]  # the last one is the center
 
         # Create center of rectangle -----------------------------------------
         x_center, y_center = positions[-1]
-        center, = self.ax.plot(x_center, y_center, marker='+', c=self.color,
-                               markersize=ptsize)
+        center, = self.ax.plot(
+            x_center,
+            y_center,
+            marker='+',
+            c=self.color,
+            markersize=ptsize,
+        )
 
         # Create all vertices (corners) of the rectangle ---------------------
         corners = []
         for pos in corner_positions:
-            pt, = self.ax.plot(*pos, marker=ptstyle, c=self.color,
-                               markersize=ptsize)
+            pt, = self.ax.plot(
+                *pos,
+                marker=ptstyle,
+                c=self.color,
+                markersize=ptsize,
+            )
             corners.append(pt)
 
         # Create all lines (edges) of the rectangle --------------------------
@@ -89,8 +130,13 @@ class Rect(InteractiveObject):
         for i, pos in enumerate(corner_positions):
             x1, y1 = corner_positions[i - 1]
             x2, y2 = pos
-            line, = self.ax.plot([x1, x2], [y1, y2], c=self.color,
-                                 linestyle=linestyle, linewidth=linewidth)
+            line, = self.ax.plot(
+                [x1, x2],
+                [y1, y2],
+                c=self.color,
+                linestyle=linestyle,
+                linewidth=linewidth,
+            )
             lines.append(line)
 
         # Define useful collections of lines / pts ---------------------------
@@ -347,7 +393,7 @@ class Rect(InteractiveObject):
         # now apply the changes to the graph ---------------------------------
         for pt in active_pts:
             xnew, ynew = self.pxtodata(self.moving_positions[pt])
-            pt.set_data(xnew, ynew)
+            pt.set_data([xnew], [ynew])
 
         for line in active_lines:
             i = self.edges.index(line)

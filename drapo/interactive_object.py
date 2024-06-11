@@ -43,13 +43,15 @@ class InteractiveObject:
     # class colors.
     colors = ['crimson', 'dimgray', 'whitesmoke', 'dodgerblue', 'lightgreen']
 
-    def __init__(self,
-                 ax=None,
-                 color=None,
-                 c=None,
-                 blit=True,
-                 block=False,
-                 verbose=False):
+    def __init__(
+        self,
+        ax=None,
+        color=None,
+        c=None,
+        blit=True,
+        block=False,
+        verbose=False,
+    ):
 
         self.ax = plt.gca() if ax is None else ax
         self.fig = self.ax.figure

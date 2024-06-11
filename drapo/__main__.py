@@ -22,7 +22,7 @@ def main(blit=True, backend=None):
 
     tt = np.linspace(0, 4, 1000)
     xx = np.exp(-tt)
-    ax1.plot(tt, xx, '-b', c='lightblue', linewidth=5)
+    ax1.plot(tt, xx, '-', c='lightblue', linewidth=5)
 
     ax1.set_xscale('log')
     ax1.set_yscale('log')
@@ -38,7 +38,7 @@ def main(blit=True, backend=None):
 
     fig2, (ax2a, ax2b) = plt.subplots(1, 2)
     ax2a.plot(tt, xx)
-    ax2b.plot(z, '-ob', c='lightsteelblue')
+    ax2b.plot(z, '-o', c='lightsteelblue')
 
     ax2a.set_yscale('log')
 
