@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drapo"
+authors = [
+    {name = "Olivier Vincent", email = "ovinc.py@gmail.com"},
+]
+description = "Interactive features (cursor, draggable lines & rectangles, graphical input, clik-to-make-axes active, etc.) for Matplotlib."
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = [
+    "interactive",
+    "matplotlib",
+    "draggable",
+    "cursor",
+    "line",
+    "rectangle",
+    "ginput",
+]
+license = {text = "BSD 3-Clause License"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: BSD License",
+]
+dependencies = [
+    "matplotlib",
+    "importlib-metadata",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/ovinc/drapo"
+Documentation = "https://github.com/ovinc/drapo/README.md"
+Repository = "https://github.com/ovinc/drapo.git"
+
+[tool.setuptools.packages.find]
+exclude = ["media",]
+
+[tool.setuptools_scm]
+# can be empty if no extra settings are needed, presence enables setuptools-scm
